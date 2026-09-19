@@ -9,6 +9,8 @@ namespace rvm
 
 struct Context;
 
+// These values are part of the C ABI consumed by RVMComputeUnits in Unity. Keep
+// their numeric representation synchronized when adding a new Core ML mode.
 enum class ComputeUnits
 {
     CpuOnly = 0,
@@ -39,6 +41,10 @@ int GetAlphaTextureInfo(
 );
 
 int CanSubmit(Context *context);
+
+// Submission and output polling use 1 for success, 0 for backpressure/no result,
+// and -1 for invalid input or an inference error. A successful output remains
+// owned by Context until the caller marks it in flight or releases it.
 int SubmitBGRA(
     Context *context,
     const uint8_t *bgra,

@@ -1,13 +1,11 @@
 #import "RVMContext.hpp"
 
-#import <CoreML/CoreML.h>
-#import <CoreVideo/CoreVideo.h>
-#import <Foundation/Foundation.h>
+#import "RVMAlphaTexturePool.hpp"
+#import "RVMModel.hpp"
 
 #include <algorithm>
-#include <array>
-#include <chrono>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -16,291 +14,29 @@ namespace rvm
 namespace
 {
 
-constexpr int InputWidth = 1280;
-constexpr int InputHeight = 720;
-constexpr int AlphaSlotCount = 3;
-constexpr int RecurrentCount = 4;
-
-__strong id<MTLDevice> s_MetalDevice = nil;
-
-enum class SlotState
-{
-    Free,
-    Inferencing,
-    Ready,
-    GPUInFlight
-};
-
-struct AlphaSlot
-{
-    CVPixelBufferRef pixelBuffer = nullptr;
-    CVMetalTextureRef textureView = nullptr;
-    __strong id<MTLTexture> texture = nil;
-    SlotState state = SlotState::Free;
-    uint64_t generation = 0;
-};
-
-const std::array<NSString *, RecurrentCount> InputStateNames =
-{
-    @"r1i", @"r2i", @"r3i", @"r4i"
-};
-
-const std::array<NSString *, RecurrentCount> OutputStateNames =
-{
-    @"r1o", @"r2o", @"r3o", @"r4o"
-};
-
-const std::array<std::array<int, 4>, RecurrentCount> RecurrentShapes =
-{{
-    {{1, 16, 135, 240}},
-    {{1, 20, 68, 120}},
-    {{1, 40, 34, 60}},
-    {{1, 64, 17, 30}}
-}};
-
 void CopyString(const std::string &source, char *destination, int capacity)
 {
     if (destination == nullptr || capacity <= 0) return;
+
+    // The C ABI accepts caller-owned buffers, so always reserve room for the
+    // terminator even when a diagnostic must be truncated.
     auto length = std::min(source.size(), static_cast<size_t>(capacity - 1));
     std::memcpy(destination, source.data(), length);
     destination[length] = '\0';
-}
-
-std::string ErrorString(NSError *error)
-{
-    if (error == nil) return "Unknown Core ML error.";
-    return error.localizedDescription.UTF8String ?: "Unknown Core ML error.";
-}
-
-bool TryGetMLComputeUnits(ComputeUnits source, MLComputeUnits &destination)
-{
-    switch (source)
-    {
-        case ComputeUnits::CpuOnly:
-            destination = MLComputeUnitsCPUOnly;
-            return true;
-        case ComputeUnits::CpuAndGpu:
-            destination = MLComputeUnitsCPUAndGPU;
-            return true;
-        case ComputeUnits::All:
-            destination = MLComputeUnitsAll;
-            return true;
-        case ComputeUnits::CpuAndNeuralEngine:
-            destination = MLComputeUnitsCPUAndNeuralEngine;
-            return true;
-        default:
-            return false;
-    }
-}
-
-bool MatchesShape(NSArray<NSNumber *> *shape, const std::array<int, 4> &expected)
-{
-    if (shape == nil || shape.count != expected.size()) return false;
-    for (NSUInteger index = 0; index < shape.count; index++)
-        if (shape[index].intValue != expected[index]) return false;
-    return true;
-}
-
-bool ValidateImageFeature(
-    NSDictionary<NSString *, MLFeatureDescription *> *features,
-    NSString *name,
-    int width,
-    int height,
-    OSType pixelFormat,
-    bool optional,
-    std::string &error
-)
-{
-    auto description = features[name];
-    auto constraint = description.imageConstraint;
-    if (description == nil || description.type != MLFeatureTypeImage || constraint == nil ||
-        constraint.pixelsWide != width || constraint.pixelsHigh != height ||
-        constraint.pixelFormatType != pixelFormat || description.isOptional != optional)
-    {
-        error = "Unexpected Core ML image feature: " +
-                std::string(name.UTF8String ?: "<unknown>") + ".";
-        return false;
-    }
-    return true;
-}
-
-bool ValidateMultiArrayFeature(
-    NSDictionary<NSString *, MLFeatureDescription *> *features,
-    NSString *name,
-    const std::array<int, 4> &shape,
-    bool optional,
-    std::string &error
-)
-{
-    auto description = features[name];
-    auto constraint = description.multiArrayConstraint;
-    auto shapeMatches = optional ? MatchesShape(constraint.shape, shape) :
-                                  (constraint.shape.count == 0 ||
-                                   MatchesShape(constraint.shape, shape));
-    if (description == nil || description.type != MLFeatureTypeMultiArray || constraint == nil ||
-        constraint.dataType != MLMultiArrayDataTypeFloat32 || !shapeMatches ||
-        description.isOptional != optional)
-    {
-        error = "Unexpected Core ML recurrent feature: " +
-                std::string(name.UTF8String ?: "<unknown>") + ".";
-        return false;
-    }
-    return true;
-}
-
-bool ValidateModelDescription(MLModel *model, std::string &error)
-{
-    auto inputs = model.modelDescription.inputDescriptionsByName;
-    auto outputs = model.modelDescription.outputDescriptionsByName;
-    if (inputs.count != 5 || outputs.count != 6)
-    {
-        error = "The RVM model must have 5 inputs and 6 outputs.";
-        return false;
-    }
-    if (!ValidateImageFeature(
-            inputs,
-            @"src",
-            InputWidth,
-            InputHeight,
-            kCVPixelFormatType_32BGRA,
-            false,
-            error
-        ))
-        return false;
-    if (!ValidateImageFeature(
-            outputs,
-            @"fgr",
-            InputWidth,
-            InputHeight,
-            kCVPixelFormatType_32BGRA,
-            false,
-            error
-        ))
-        return false;
-    if (!ValidateImageFeature(
-            outputs,
-            @"pha",
-            InputWidth,
-            InputHeight,
-            kCVPixelFormatType_OneComponent8,
-            false,
-            error
-        ))
-        return false;
-
-    for (auto index = 0; index < RecurrentCount; index++)
-    {
-        if (!ValidateMultiArrayFeature(
-                inputs,
-                InputStateNames[static_cast<size_t>(index)],
-                RecurrentShapes[static_cast<size_t>(index)],
-                true,
-                error
-            ))
-            return false;
-        if (!ValidateMultiArrayFeature(
-                outputs,
-                OutputStateNames[static_cast<size_t>(index)],
-                RecurrentShapes[static_cast<size_t>(index)],
-                false,
-                error
-            ))
-            return false;
-    }
-    return true;
-}
-
-NSURL *ResolveModelURL(NSString *path, NSError **error)
-{
-    auto sourceURL = [NSURL fileURLWithPath:path];
-    if ([path.pathExtension caseInsensitiveCompare:@"mlmodel"] != NSOrderedSame)
-        return sourceURL;
-
-    auto manager = NSFileManager.defaultManager;
-    auto cacheRoot = [manager URLsForDirectory:NSCachesDirectory
-                                      inDomains:NSUserDomainMask].firstObject;
-    if (cacheRoot == nil) return [MLModel compileModelAtURL:sourceURL error:error];
-
-    auto cacheDirectory = [cacheRoot URLByAppendingPathComponent:
-        @"jp.keijiro.rvm-unity/CoreML" isDirectory:YES];
-    auto cacheName = [[path.lastPathComponent stringByDeletingPathExtension]
-        stringByAppendingPathExtension:@"mlmodelc"];
-    auto cachedURL = [cacheDirectory URLByAppendingPathComponent:cacheName isDirectory:YES];
-    BOOL isDirectory = NO;
-    if ([manager fileExistsAtPath:cachedURL.path isDirectory:&isDirectory] && isDirectory)
-        return cachedURL;
-
-    if (![manager createDirectoryAtURL:cacheDirectory
-           withIntermediateDirectories:YES
-                            attributes:nil
-                                 error:error])
-        return nil;
-
-    auto compiledURL = [MLModel compileModelAtURL:sourceURL error:error];
-    if (compiledURL == nil) return nil;
-    if ([manager copyItemAtURL:compiledURL toURL:cachedURL error:error]) return cachedURL;
-
-    if ([manager fileExistsAtPath:cachedURL.path isDirectory:&isDirectory] && isDirectory)
-    {
-        if (error != nullptr) *error = nil;
-        return cachedURL;
-    }
-    return nil;
-}
-
-CVPixelBufferRef CreateInputPixelBuffer(
-    const uint8_t *bgra,
-    int width,
-    int height,
-    int rowBytes
-)
-{
-    NSDictionary *attributes = @{
-        (id)kCVPixelBufferMetalCompatibilityKey: @YES,
-        (id)kCVPixelBufferIOSurfacePropertiesKey: @{}
-    };
-    CVPixelBufferRef buffer = nullptr;
-    auto status = CVPixelBufferCreate(
-        kCFAllocatorDefault,
-        width,
-        height,
-        kCVPixelFormatType_32BGRA,
-        (__bridge CFDictionaryRef)attributes,
-        &buffer
-    );
-    if (status != kCVReturnSuccess || buffer == nullptr) return nullptr;
-
-    status = CVPixelBufferLockBaseAddress(buffer, 0);
-    if (status != kCVReturnSuccess)
-    {
-        CFRelease(buffer);
-        return nullptr;
-    }
-    auto destination = static_cast<uint8_t *>(CVPixelBufferGetBaseAddress(buffer));
-    auto destinationRowBytes = CVPixelBufferGetBytesPerRow(buffer);
-    for (auto y = 0; y < height; y++)
-    {
-        auto sourceRow = bgra + y * rowBytes;
-        auto destinationRow = destination + y * destinationRowBytes;
-        std::memcpy(destinationRow, sourceRow, static_cast<size_t>(width * 4));
-    }
-    CVPixelBufferUnlockBaseAddress(buffer, 0);
-    return buffer;
 }
 
 } // namespace
 
 struct Context
 {
-    __strong MLModel *model = nil;
-    __strong NSArray<MLMultiArray *> *recurrentStates = nil;
+    // Model is confined to queue because its recurrent state is updated by every
+    // prediction. The mutex protects only state shared with Unity's polling thread.
+    std::unique_ptr<Model> model;
+    std::unique_ptr<AlphaTexturePool> alphaTextures;
     dispatch_queue_t queue = nullptr;
     std::mutex mutex;
-    CVMetalTextureCacheRef textureCache = nullptr;
-    std::array<AlphaSlot, AlphaSlotCount> slots;
     std::string error;
     int readySlot = -1;
-    int nextSlot = 0;
     uint64_t readyGeneration = 0;
     uint64_t readyFrameNumber = 0;
     uint64_t nextFrameNumber = 1;
@@ -308,128 +44,33 @@ struct Context
     bool busy = false;
     bool ready = false;
     bool errorReady = false;
-
-    ~Context()
-    {
-        recurrentStates = nil;
-        model = nil;
-        for (auto &slot : slots)
-        {
-            slot.texture = nil;
-            if (slot.textureView != nullptr) CFRelease(slot.textureView);
-            if (slot.pixelBuffer != nullptr) CFRelease(slot.pixelBuffer);
-        }
-        if (textureCache != nullptr) CFRelease(textureCache);
-    }
 };
 
 namespace
 {
 
-bool CreateAlphaSlots(Context *context, std::string &error)
+void ClearReadyResult(Context *context)
 {
-    auto device = s_MetalDevice ?: MTLCreateSystemDefaultDevice();
-    if (device == nil)
-    {
-        error = "Could not obtain a Metal device.";
-        return false;
-    }
-
-    auto status = CVMetalTextureCacheCreate(
-        kCFAllocatorDefault,
-        nullptr,
-        device,
-        nullptr,
-        &context->textureCache
-    );
-    if (status != kCVReturnSuccess || context->textureCache == nullptr)
-    {
-        error = "Could not create the Core Video Metal texture cache.";
-        return false;
-    }
-
-    NSDictionary *attributes = @{
-        (id)kCVPixelBufferMetalCompatibilityKey: @YES,
-        (id)kCVPixelBufferIOSurfacePropertiesKey: @{}
-    };
-    for (auto &slot : context->slots)
-    {
-        status = CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            InputWidth,
-            InputHeight,
-            kCVPixelFormatType_OneComponent8,
-            (__bridge CFDictionaryRef)attributes,
-            &slot.pixelBuffer
-        );
-        if (status != kCVReturnSuccess || slot.pixelBuffer == nullptr ||
-            CVPixelBufferGetIOSurface(slot.pixelBuffer) == nullptr)
-        {
-            error = "Could not create an IOSurface-backed alpha buffer.";
-            return false;
-        }
-
-        status = CVMetalTextureCacheCreateTextureFromImage(
-            kCFAllocatorDefault,
-            context->textureCache,
-            slot.pixelBuffer,
-            nullptr,
-            MTLPixelFormatR8Unorm,
-            InputWidth,
-            InputHeight,
-            0,
-            &slot.textureView
-        );
-        if (status != kCVReturnSuccess || slot.textureView == nullptr)
-        {
-            error = "Could not create a Metal alpha texture view.";
-            return false;
-        }
-        slot.texture = CVMetalTextureGetTexture(slot.textureView);
-        if (slot.texture == nil)
-        {
-            error = "The alpha texture view did not contain a Metal texture.";
-            return false;
-        }
-    }
-    return true;
-}
-
-int AcquireSlot(Context *context)
-{
-    for (auto offset = 0; offset < AlphaSlotCount; offset++)
-    {
-        auto index = (context->nextSlot + offset) % AlphaSlotCount;
-        auto &slot = context->slots[static_cast<size_t>(index)];
-        if (slot.state != SlotState::Free) continue;
-        slot.state = SlotState::Inferencing;
-        slot.generation++;
-        context->nextSlot = (index + 1) % AlphaSlotCount;
-        return index;
-    }
-    return -1;
+    context->ready = false;
+    context->readySlot = -1;
+    context->readyGeneration = 0;
+    context->readyFrameNumber = 0;
 }
 
 void StoreError(Context *context, const std::string &message, int slotIndex = -1)
 {
     std::lock_guard<std::mutex> lock(context->mutex);
-    if (slotIndex >= 0 && slotIndex < AlphaSlotCount)
-        context->slots[static_cast<size_t>(slotIndex)].state = SlotState::Free;
+
+    // Errors are delivered through the same single-result mailbox as successful
+    // predictions. Holding a slot after failure would eventually stall submission.
+    context->alphaTextures->Cancel(slotIndex);
     context->error = message;
     context->busy = false;
-    context->ready = false;
-    context->readySlot = -1;
-    context->readyGeneration = 0;
-    context->readyFrameNumber = 0;
+    ClearReadyResult(context);
     context->errorReady = true;
 }
 
 } // namespace
-
-void SetMetalDevice(id<MTLDevice> device)
-{
-    s_MetalDevice = device;
-}
 
 Context *CreateContext(
     const char *modelPath,
@@ -440,59 +81,31 @@ Context *CreateContext(
 {
     @autoreleasepool
     {
-        if (modelPath == nullptr)
+        auto model = std::make_unique<Model>();
+        std::string error;
+        if (!model->Load(modelPath, computeUnits, error))
         {
-            CopyString("The model path is null.", errorBuffer, errorCapacity);
+            CopyString(error, errorBuffer, errorCapacity);
             return nullptr;
         }
 
-        MLComputeUnits mlComputeUnits;
-        if (!TryGetMLComputeUnits(computeUnits, mlComputeUnits))
+        auto alphaTextures = std::make_unique<AlphaTexturePool>();
+        if (!alphaTextures->Initialize(error))
         {
-            CopyString("Invalid Core ML compute units value.", errorBuffer, errorCapacity);
-            return nullptr;
-        }
-
-        NSError *error = nil;
-        auto path = [NSString stringWithUTF8String:modelPath];
-        auto modelURL = ResolveModelURL(path, &error);
-        if (modelURL == nil)
-        {
-            CopyString(ErrorString(error), errorBuffer, errorCapacity);
-            return nullptr;
-        }
-
-        auto configuration = [MLModelConfiguration new];
-        configuration.computeUnits = mlComputeUnits;
-        auto model = [MLModel modelWithContentsOfURL:modelURL
-                                      configuration:configuration
-                                              error:&error];
-        if (model == nil)
-        {
-            CopyString(ErrorString(error), errorBuffer, errorCapacity);
-            return nullptr;
-        }
-
-        std::string validationError;
-        if (!ValidateModelDescription(model, validationError))
-        {
-            CopyString(validationError, errorBuffer, errorCapacity);
+            CopyString(error, errorBuffer, errorCapacity);
             return nullptr;
         }
 
         auto context = new Context();
-        context->model = model;
+        context->model = std::move(model);
+        context->alphaTextures = std::move(alphaTextures);
+
+        // RVM feeds each prediction's recurrent tensors into the next frame. A serial
+        // queue preserves that temporal ordering without blocking Unity's main thread.
         context->queue = dispatch_queue_create(
             "jp.keijiro.rvm.inference",
             DISPATCH_QUEUE_SERIAL
         );
-        std::string slotError;
-        if (!CreateAlphaSlots(context, slotError))
-        {
-            CopyString(slotError, errorBuffer, errorCapacity);
-            delete context;
-            return nullptr;
-        }
         return context;
     }
 }
@@ -500,6 +113,9 @@ Context *CreateContext(
 void DestroyContext(Context *context)
 {
     if (context == nullptr) return;
+
+    // The queued block captures Context and its input buffer, so destruction must wait
+    // until it has either published a result or released its error path resources.
     dispatch_sync(context->queue, ^{});
     delete context;
 }
@@ -516,7 +132,7 @@ int GetInputHeight(Context *context)
 
 int GetAlphaSlotCount(Context *context)
 {
-    return context == nullptr ? 0 : AlphaSlotCount;
+    return context == nullptr ? 0 : context->alphaTextures->GetSlotCount();
 }
 
 int GetAlphaTextureInfo(
@@ -527,25 +143,21 @@ int GetAlphaTextureInfo(
     void **nativeTexture
 )
 {
-    if (context == nullptr || slotIndex < 0 || slotIndex >= AlphaSlotCount) return -1;
-    const auto &slot = context->slots[static_cast<size_t>(slotIndex)];
-    if (slot.texture == nil) return -1;
-    if (width != nullptr) *width = InputWidth;
-    if (height != nullptr) *height = InputHeight;
-    if (nativeTexture != nullptr) *nativeTexture = (__bridge void *)slot.texture;
-    return 1;
+    if (context == nullptr) return -1;
+    return context->alphaTextures->GetTextureInfo(
+        slotIndex,
+        width,
+        height,
+        nativeTexture
+    );
 }
 
 int CanSubmit(Context *context)
 {
     if (context == nullptr) return 0;
     std::lock_guard<std::mutex> lock(context->mutex);
-    auto hasFreeSlot = std::any_of(
-        context->slots.begin(),
-        context->slots.end(),
-        [](const auto &slot) { return slot.state == SlotState::Free; }
-    );
-    return !context->busy && !context->ready && !context->errorReady && hasFreeSlot;
+    return !context->busy && !context->ready && !context->errorReady &&
+           context->alphaTextures->HasFreeSlot();
 }
 
 int SubmitBGRA(
@@ -564,14 +176,16 @@ int SubmitBGRA(
     {
         std::lock_guard<std::mutex> lock(context->mutex);
         if (context->busy || context->ready || context->errorReady) return 0;
-        slotIndex = AcquireSlot(context);
+        slotIndex = context->alphaTextures->Acquire();
         if (slotIndex < 0) return 0;
         frameNumber = context->nextFrameNumber++;
         context->busy = true;
     }
 
-    auto pixelBuffer = CreateInputPixelBuffer(bgra, width, height, rowBytes);
-    if (pixelBuffer == nullptr)
+    // Unity owns the source pointer only for the duration of this call. Copy it into
+    // a retained pixel buffer before the asynchronous block outlives that pointer.
+    auto input = CreateInputPixelBuffer(bgra, width, height, rowBytes);
+    if (input == nullptr)
     {
         StoreError(context, "Could not allocate the Core Video input buffer.", slotIndex);
         return -1;
@@ -580,77 +194,27 @@ int SubmitBGRA(
     dispatch_async(context->queue, ^{
         @autoreleasepool
         {
-            auto &slot = context->slots[static_cast<size_t>(slotIndex)];
-            NSError *error = nil;
-            auto sourceValue = [MLFeatureValue featureValueWithPixelBuffer:pixelBuffer];
-            auto inputs = [NSMutableDictionary<NSString *, id> dictionaryWithObject:sourceValue
-                                                                             forKey:@"src"];
-            if (context->recurrentStates != nil)
+            double milliseconds;
+            std::string error;
+            auto alpha = context->alphaTextures->GetPixelBuffer(slotIndex);
+            auto succeeded = context->model->Predict(
+                input,
+                alpha,
+                milliseconds,
+                error
+            );
+            CFRelease(input);
+            if (!succeeded)
             {
-                for (auto index = 0; index < RecurrentCount; index++)
-                {
-                    auto state = context->recurrentStates[static_cast<NSUInteger>(index)];
-                    inputs[InputStateNames[static_cast<size_t>(index)]] =
-                        [MLFeatureValue featureValueWithMultiArray:state];
-                }
-            }
-            auto provider = [[MLDictionaryFeatureProvider alloc]
-                initWithDictionary:inputs
-                error:&error];
-            if (provider == nil)
-            {
-                CFRelease(pixelBuffer);
-                StoreError(context, ErrorString(error), slotIndex);
+                StoreError(context, error, slotIndex);
                 return;
             }
 
-            auto options = [MLPredictionOptions new];
-            options.outputBackings = @{ @"pha": (__bridge id)slot.pixelBuffer };
-            auto start = std::chrono::steady_clock::now();
-            auto prediction = [context->model predictionFromFeatures:provider
-                                                       options:options
-                                                         error:&error];
-            auto end = std::chrono::steady_clock::now();
-            CFRelease(pixelBuffer);
-            if (prediction == nil)
-            {
-                StoreError(context, ErrorString(error), slotIndex);
-                return;
-            }
-
-            auto alpha = [prediction featureValueForName:@"pha"].imageBufferValue;
-            if (alpha != slot.pixelBuffer)
-            {
-                StoreError(
-                    context,
-                    "Core ML rejected the requested alpha output backing.",
-                    slotIndex
-                );
-                return;
-            }
-
-            auto nextStates = [NSMutableArray<MLMultiArray *> arrayWithCapacity:RecurrentCount];
-            for (auto index = 0; index < RecurrentCount; index++)
-            {
-                auto state = [prediction
-                    featureValueForName:OutputStateNames[static_cast<size_t>(index)]
-                ].multiArrayValue;
-                if (state == nil || state.dataType != MLMultiArrayDataTypeFloat32 ||
-                    !MatchesShape(state.shape, RecurrentShapes[static_cast<size_t>(index)]))
-                {
-                    StoreError(context, "The model returned an invalid recurrent state.", slotIndex);
-                    return;
-                }
-                [nextStates addObject:state];
-            }
-
-            auto milliseconds = std::chrono::duration<double, std::milli>(end - start).count();
             std::lock_guard<std::mutex> lock(context->mutex);
-            context->recurrentStates = [nextStates copy];
+            context->alphaTextures->MarkReady(slotIndex);
             context->inferenceMilliseconds = milliseconds;
-            slot.state = SlotState::Ready;
             context->readySlot = slotIndex;
-            context->readyGeneration = slot.generation;
+            context->readyGeneration = context->alphaTextures->GetGeneration(slotIndex);
             context->readyFrameNumber = frameNumber;
             context->busy = false;
             context->ready = true;
@@ -687,6 +251,9 @@ int TryGetOutputInfo(
         return -1;
     }
     if (!context->ready) return 0;
+
+    // Polling is non-destructive: Unity must first create/queue its external texture
+    // work, then explicitly transfer or release the slot using its generation token.
     if (width != nullptr) *width = InputWidth;
     if (height != nullptr) *height = InputHeight;
     if (inferenceMilliseconds != nullptr)
@@ -699,36 +266,26 @@ int TryGetOutputInfo(
 
 int MarkAlphaSlotGPUInFlight(Context *context, int slotIndex, uint64_t generation)
 {
-    if (context == nullptr || slotIndex < 0 || slotIndex >= AlphaSlotCount) return -1;
+    if (context == nullptr) return -1;
     std::lock_guard<std::mutex> lock(context->mutex);
-    auto &slot = context->slots[static_cast<size_t>(slotIndex)];
     if (!context->ready || context->readySlot != slotIndex ||
-        context->readyGeneration != generation || slot.generation != generation)
+        context->readyGeneration != generation)
         return 0;
-    if (slot.state != SlotState::Ready) return 0;
-    slot.state = SlotState::GPUInFlight;
-    context->ready = false;
-    context->readySlot = -1;
-    context->readyGeneration = 0;
-    context->readyFrameNumber = 0;
+
+    auto result = context->alphaTextures->MarkGPUInFlight(slotIndex, generation);
+    if (result != 1) return result;
+    ClearReadyResult(context);
     return 1;
 }
 
 int ReleaseAlphaSlot(Context *context, int slotIndex, uint64_t generation)
 {
-    if (context == nullptr || slotIndex < 0 || slotIndex >= AlphaSlotCount) return -1;
+    if (context == nullptr) return -1;
     std::lock_guard<std::mutex> lock(context->mutex);
-    auto &slot = context->slots[static_cast<size_t>(slotIndex)];
-    if (slot.generation != generation) return -1;
-    if (slot.state != SlotState::Ready && slot.state != SlotState::GPUInFlight) return 0;
-    slot.state = SlotState::Free;
+    auto result = context->alphaTextures->Release(slotIndex, generation);
+    if (result != 1) return result;
     if (context->readySlot == slotIndex && context->readyGeneration == generation)
-    {
-        context->ready = false;
-        context->readySlot = -1;
-        context->readyGeneration = 0;
-        context->readyFrameNumber = 0;
-    }
+        ClearReadyResult(context);
     return 1;
 }
 

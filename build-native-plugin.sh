@@ -7,6 +7,8 @@ native_dir="$project_dir/Plugin"
 source_files=(
     "$native_dir/RVMPlugin.mm"
     "$native_dir/RVMContext.mm"
+    "$native_dir/RVMModel.mm"
+    "$native_dir/RVMAlphaTexturePool.mm"
 )
 plist_file="$native_dir/Info.plist"
 bundle_dir="$project_dir/Assets/Plugins/macOS/RVMPlugin.bundle"

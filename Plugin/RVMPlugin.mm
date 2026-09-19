@@ -3,10 +3,14 @@
 #include "IUnityGraphics.h"
 #include "IUnityGraphicsMetal.h"
 
+// Hide every implementation symbol by default and expose only this C ABI. Keeping
+// Objective-C++ and STL types behind opaque handles avoids an ABI dependency in C#.
 #define RVM_EXPORT extern "C" __attribute__((visibility("default")))
 
 RVM_EXPORT void UnityPluginLoad(IUnityInterfaces *interfaces)
 {
+    // The texture pool must use Unity's Metal device so its native texture handles
+    // can be wrapped directly by Texture2D.CreateExternalTexture.
     auto metal = interfaces == nullptr ? nullptr : interfaces->Get<IUnityGraphicsMetalV2>();
     rvm::SetMetalDevice(metal == nullptr ? nil : metal->MetalDevice());
 }
