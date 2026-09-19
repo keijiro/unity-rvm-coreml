@@ -1,11 +1,11 @@
 :root {
     flex-grow: 1;
-    --background: #101318;
-    --surface: #191e25;
-    --border: #343d48;
-    --text: #e9edf2;
-    --muted: #98a5b5;
-    --accent: #a9d8d1;
+    --background: #131313;
+    --surface: #1d1d1d;
+    --border: #3c3c3c;
+    --text: #ededed;
+    --muted: #a2a2a2;
+    --accent: #cccccc;
 }
 
 .screen {
@@ -71,12 +71,12 @@
     background-color: var(--surface);
     border-width: 1px;
     border-color: var(--border);
-    border-radius: 8px;
+    border-radius: 3px;
 }
 
 .source-dropdown:hover > .unity-base-popup-field__input {
-    background-color: #232c36;
-    border-color: #617384;
+    background-color: #2a2a2a;
+    border-color: #707070;
 }
 
 .source-dropdown:focus > .unity-base-popup-field__input {
@@ -143,7 +143,7 @@
     background-color: var(--surface);
     border-width: 1px;
     border-color: var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
 }
 
 .viewport-panel-left {
@@ -164,7 +164,7 @@
 
 .viewport-image {
     aspect-ratio: 1.777778;
-    background-color: #080a0d;
-    border-radius: 4px;
+    background-color: #0a0a0a;
+    border-radius: 2px;
     overflow: hidden;
 }
