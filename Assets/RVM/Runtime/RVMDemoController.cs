@@ -14,6 +14,9 @@ namespace RVM
 [RequireComponent(typeof(PanelRenderer))]
 public sealed class RVMDemoController : MonoBehaviour
 {
+    const int InputWidth = 960;
+    const int InputHeight = 540;
+
     [field:SerializeField]
     public RVMComputeUnits ComputeUnits { get; set; } = RVMComputeUnits.All;
 
@@ -74,7 +77,7 @@ public sealed class RVMDemoController : MonoBehaviour
 
         var modelPath = Path.Combine(
             Application.streamingAssetsPath,
-            "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel"
+            "Models/rvm_mobilenetv3_960x540_s0.25_int8.mlmodel"
         );
         var computeUnits = ComputeUnits;
         SetStatus("Loading RVM MobileNetV3 model…");
@@ -174,7 +177,7 @@ public sealed class RVMDemoController : MonoBehaviour
             yield break;
         }
 
-        _webcam = new WebCamTexture(1280, 720, 30);
+        _webcam = new WebCamTexture(InputWidth, InputHeight, 30);
         _webcam.Play();
         UpdateCameraImage();
     }
@@ -206,7 +209,7 @@ public sealed class RVMDemoController : MonoBehaviour
         _plugin = result.Handle;
         _inputWidth = RVMNative.RVMGetInputWidth(_plugin);
         _inputHeight = RVMNative.RVMGetInputHeight(_plugin);
-        if (_inputWidth != 1280 || _inputHeight != 720)
+        if (_inputWidth != InputWidth || _inputHeight != InputHeight)
         {
             SetStatus($"Unexpected model input size: {_inputWidth} × {_inputHeight}.");
             RVMNative.RVMDestroy(_plugin);
@@ -353,7 +356,8 @@ public sealed class RVMDemoController : MonoBehaviour
                 out var height,
                 out var pointer
             );
-            if (result != 1 || width != 1280 || height != 720 || pointer == IntPtr.Zero)
+            if (result != 1 || width != InputWidth || height != InputHeight ||
+                pointer == IntPtr.Zero)
             {
                 DestroyAlphaTextures();
                 SetStatus($"Could not obtain GPU alpha slot {index}.");

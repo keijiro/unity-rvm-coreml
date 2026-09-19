@@ -20,8 +20,8 @@ public static class ProjectValidator
 {
     const string LibraryName = "RVMPlugin";
     const int ErrorCapacity = 1024;
-    const int InputWidth = 1280;
-    const int InputHeight = 720;
+    const int InputWidth = 960;
+    const int InputHeight = 540;
 
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     static extern IntPtr RVMCreateWithComputeUnits(
@@ -151,7 +151,7 @@ public static class ProjectValidator
     {
         var modelPath = Path.Combine(
             Application.streamingAssetsPath,
-            "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel"
+            "Models/rvm_mobilenetv3_960x540_s0.25_int8.mlmodel"
         );
         var error = new StringBuilder(ErrorCapacity);
         var stopwatch = Stopwatch.StartNew();

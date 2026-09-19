@@ -29,10 +29,10 @@ const std::array<NSString *, RecurrentCount> OutputStateNames =
 
 const std::array<std::array<int, 4>, RecurrentCount> RecurrentShapes =
 {{
-    {{1, 16, 135, 240}},
-    {{1, 20, 68, 120}},
-    {{1, 40, 34, 60}},
-    {{1, 64, 17, 30}}
+    {{1, 16, 68, 120}},
+    {{1, 20, 34, 60}},
+    {{1, 40, 17, 30}},
+    {{1, 64, 9, 15}}
 }};
 
 std::string ErrorString(NSError *error)

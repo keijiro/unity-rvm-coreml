@@ -1,11 +1,10 @@
 # RVM Unity Camera Test
 
-This macOS-only Unity 6 project runs Robust Video Matting (RVM) continuously on a webcam feed with Core ML and Metal. The left pane shows the normalized 1280 × 720 model input and the right pane shows the predicted person alpha matte.
+This macOS-only Unity 6 project runs Robust Video Matting (RVM) continuously on a webcam feed with Core ML and Metal. The left pane shows the normalized 960 × 540 model input and the right pane shows the predicted person alpha matte.
 
 ## Setup
 
 ```sh
-./prepare-model.sh
 ./build-native-plugin.sh
 ```
 
@@ -25,6 +24,6 @@ unity run . --editor-version 6000.6.1f1 --timeout 300 -- \
 
 ## Model and attribution
 
-The bundled model is `rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel` from [PeterL1n/RobustVideoMatting](https://github.com/PeterL1n/RobustVideoMatting), release `v1.0.0`. It uses MobileNetV3, a fixed 1280 × 720 input, downsample ratio 0.375, and INT8-quantized weights. Its SHA-256 is `68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794`.
+The bundled `rvm_mobilenetv3_960x540_s0.25_int8.mlmodel` is a derived model generated from the official MobileNetV3 weights with the upstream `coreml` exporter at revision `b4850905347f4fcc588b5f7ed7cbfd34ae206436`. It uses a fixed 960 × 540 input, downsample ratio 0.25, the deep guided filter, and INT8-quantized weights. The exporter ran with Torch 1.8.1, Torchvision 0.9.1, and CoreMLTools 5.0b1. The generated model's SHA-256 is `6b4ee7da140911480c9c8d334faa875b28ce622952e8b9ec7bb25df92959108c`.
 
 RVM is described in *Robust High-Resolution Video Matting with Temporal Guidance* (Lin et al., WACV 2022). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for upstream licensing information.

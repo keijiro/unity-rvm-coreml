@@ -26,7 +26,7 @@ under `Assets/Plugins/macOS/RVMPlugin.bundle`.
 
 ## Frame lifecycle
 
-Unity first checks `RVMCanSubmit`, then passes a 1280 x 720 BGRA frame to
+Unity first checks `RVMCanSubmit`, then passes a 960 x 540 BGRA frame to
 `RVMSubmitBGRA`. The context copies the caller-owned pixels and schedules Core ML on
 its serial queue. Serialization is required because RVM carries four recurrent
 tensors from one successful prediction into the next.

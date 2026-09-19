@@ -11,8 +11,8 @@
 namespace rvm
 {
 
-constexpr int InputWidth = 1280;
-constexpr int InputHeight = 720;
+constexpr int InputWidth = 960;
+constexpr int InputHeight = 540;
 
 class Model final
 {
