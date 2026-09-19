@@ -1,0 +1,19 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="../RVM/UI/Main.uss" />
+    <ui:VisualElement name="root" class="screen">
+        <ui:VisualElement class="header">
+            <ui:Label text="Inference time" class="status-label" />
+            <ui:Label name="statusLabel" class="status" />
+        </ui:VisualElement>
+        <ui:VisualElement class="viewports">
+            <ui:VisualElement class="viewport-panel viewport-panel-left">
+                <ui:Label text="Model input" class="viewport-title" />
+                <ui:Image name="cameraImage" class="viewport-image" />
+            </ui:VisualElement>
+            <ui:VisualElement class="viewport-panel viewport-panel-right">
+                <ui:Label text="Alpha matte" class="viewport-title" />
+                <ui:Image name="alphaImage" class="viewport-image" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

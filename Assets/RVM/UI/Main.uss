@@ -1,0 +1,77 @@
+:root {
+    flex-grow: 1;
+    --background: rgba(0, 0, 0, 0);
+    --panel: rgba(18, 18, 18, 0.72);
+    --text: #f2f2f2;
+    --muted: #a0a0a0;
+    --accent: #f2f2f2;
+}
+
+.screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 24px;
+    background-color: var(--background);
+    color: var(--text);
+}
+
+.header {
+    position: absolute;
+    right: 24px;
+    top: 24px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.status-label {
+    margin-right: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.status {
+    color: var(--accent);
+    font-size: 13px;
+    -unity-text-align: middle-right;
+}
+
+.viewports {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 64px;
+    bottom: 24px;
+    flex-direction: row;
+}
+
+.viewport-panel {
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 12px;
+    background-color: var(--panel);
+    border-radius: 4px;
+}
+
+.viewport-panel-left {
+    margin-right: 6px;
+}
+
+.viewport-panel-right {
+    margin-left: 6px;
+}
+
+.viewport-title {
+    margin-bottom: 9px;
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.viewport-image {
+    flex-grow: 1;
+    background-color: #000000;
+}
