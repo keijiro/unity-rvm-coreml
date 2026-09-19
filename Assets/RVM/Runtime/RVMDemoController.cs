@@ -104,7 +104,12 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _panelRenderer = null;
         UnbindUI();
 
-        if (_readbackPending)
+        // A readback queued after the alpha Blit is a CPU-visible completion point
+        // for every earlier graphics command. OnDisable cannot yield, so drain the
+        // queue here before returning the external textures to the native pool.
+        if (_alphaLeases.Count > 0)
+            AsyncGPUReadback.Request(_alphaDisplayTexture);
+        if (_readbackPending || _alphaLeases.Count > 0)
         {
             AsyncGPUReadback.WaitAllRequests();
             _readbackPending = false;
@@ -430,7 +435,6 @@ public sealed partial class RVMDemoController : MonoBehaviour
     {
         foreach (var lease in _alphaLeases)
         {
-            if (!lease.Fence.passed) Graphics.WaitOnAsyncGraphicsFence(lease.Fence);
             RVMNative.RVMReleaseAlphaSlot(
                 _plugin,
                 lease.SlotIndex,

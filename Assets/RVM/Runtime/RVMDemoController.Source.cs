@@ -159,7 +159,8 @@ public sealed partial class RVMDemoController
         while (_readbackPending) yield return null;
         if (generation != _sourceGeneration) yield break;
 
-        ResetInferenceState();
+        yield return ResetInferenceState(generation);
+        if (generation != _sourceGeneration) yield break;
         ClearDisplayTextures();
         _currentSourceIndex = index;
         _sourceError = null;
@@ -280,7 +281,8 @@ public sealed partial class RVMDemoController
         while (_readbackPending) yield return null;
         if (generation != _sourceGeneration) yield break;
 
-        ResetInferenceState();
+        yield return ResetInferenceState(generation);
+        if (generation != _sourceGeneration) yield break;
         ClearDisplayTextures();
         _videoPlayer.frame = 0;
         _videoPlayer.Play();
@@ -365,9 +367,16 @@ public sealed partial class RVMDemoController
         return true;
     }
 
-    void ResetInferenceState()
+    IEnumerator ResetInferenceState(int generation)
     {
-        if (_plugin == IntPtr.Zero) return;
+        if (_plugin == IntPtr.Zero) yield break;
+        while (_alphaLeases.Count > 0)
+        {
+            ReleaseCompletedAlphaSlots();
+            if (_alphaLeases.Count == 0) break;
+            yield return null;
+            if (generation != _sourceGeneration) yield break;
+        }
         ReleaseAllAlphaSlots();
         RVMNative.RVMResetState(_plugin);
     }
