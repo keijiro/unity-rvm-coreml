@@ -1,7 +1,6 @@
 :root {
     flex-grow: 1;
     --background: rgba(0, 0, 0, 0);
-    --panel: rgba(18, 18, 18, 0.72);
     --text: #f2f2f2;
     --muted: #a0a0a0;
     --accent: #f2f2f2;
@@ -51,9 +50,7 @@
 .viewport-panel {
     flex-grow: 1;
     flex-basis: 0;
-    padding: 12px;
-    background-color: var(--panel);
-    border-radius: 4px;
+    justify-content: center;
 }
 
 .viewport-panel-left {
@@ -72,6 +69,5 @@
 }
 
 .viewport-image {
-    flex-grow: 1;
-    background-color: #000000;
+    aspect-ratio: 1.777778;
 }
