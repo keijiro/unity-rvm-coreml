@@ -50,6 +50,11 @@ RVM_EXPORT void RVMDestroy(void *handle)
     rvm::DestroyContext(static_cast<rvm::Context *>(handle));
 }
 
+RVM_EXPORT void RVMResetState(void *handle)
+{
+    rvm::ResetState(static_cast<rvm::Context *>(handle));
+}
+
 RVM_EXPORT int RVMGetInputWidth(void *handle)
 {
     return rvm::GetInputWidth(static_cast<rvm::Context *>(handle));

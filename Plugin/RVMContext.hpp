@@ -28,6 +28,7 @@ Context *CreateContext(
     int errorCapacity
 );
 void DestroyContext(Context *context);
+void ResetState(Context *context);
 
 int GetInputWidth(Context *context);
 int GetInputHeight(Context *context);

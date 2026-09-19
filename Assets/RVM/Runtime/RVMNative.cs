@@ -43,6 +43,9 @@ internal static class RVMNative
     internal static extern void RVMDestroy(IntPtr handle);
 
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern void RVMResetState(IntPtr handle);
+
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     internal static extern int RVMGetInputWidth(IntPtr handle);
 
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
@@ -146,6 +149,7 @@ internal static class RVMNative
         new(IntPtr.Zero, "RVM inference is supported only on macOS.");
 
     internal static void RVMDestroy(IntPtr handle) { }
+    internal static void RVMResetState(IntPtr handle) { }
     internal static int RVMGetInputWidth(IntPtr handle) => 0;
     internal static int RVMGetInputHeight(IntPtr handle) => 0;
     internal static int RVMGetAlphaSlotCount(IntPtr handle) => 0;

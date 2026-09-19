@@ -30,6 +30,7 @@ public:
         double &inferenceMilliseconds,
         std::string &error
     );
+    void ResetState();
 
 private:
     struct Impl;

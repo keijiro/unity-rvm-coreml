@@ -355,6 +355,11 @@ bool Model::Predict(
     return true;
 }
 
+void Model::ResetState()
+{
+    _impl->recurrentStates = nil;
+}
+
 CVPixelBufferRef CreateInputPixelBuffer(
     const uint8_t *bgra,
     int width,

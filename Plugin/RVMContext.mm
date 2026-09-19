@@ -120,6 +120,27 @@ void DestroyContext(Context *context)
     delete context;
 }
 
+void ResetState(Context *context)
+{
+    if (context == nullptr) return;
+
+    // Reset runs on the model's serial queue so it cannot clear recurrent tensors
+    // midway through a prediction. The completed result is then discarded under the
+    // mailbox lock; GPU-in-flight slots remain owned by Unity until their fences pass.
+    dispatch_sync(context->queue, ^{
+        context->model->ResetState();
+    });
+
+    std::lock_guard<std::mutex> lock(context->mutex);
+    if (context->readySlot >= 0)
+        context->alphaTextures->Cancel(context->readySlot);
+    context->error.clear();
+    context->busy = false;
+    context->errorReady = false;
+    context->nextFrameNumber = 1;
+    ClearReadyResult(context);
+}
+
 int GetInputWidth(Context *context)
 {
     return context == nullptr ? 0 : InputWidth;

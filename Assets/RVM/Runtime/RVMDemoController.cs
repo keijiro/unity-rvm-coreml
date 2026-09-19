@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -7,12 +6,13 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
+using UnityEngine.Video;
 
 namespace RVM
 {
 
-[RequireComponent(typeof(PanelRenderer))]
-public sealed class RVMDemoController : MonoBehaviour
+[RequireComponent(typeof(PanelRenderer), typeof(VideoPlayer))]
+public sealed partial class RVMDemoController : MonoBehaviour
 {
     [field:SerializeField]
     public RVMComputeUnits ComputeUnits { get; set; } = RVMComputeUnits.All;
@@ -36,7 +36,6 @@ public sealed class RVMDemoController : MonoBehaviour
 
     IntPtr _plugin;
     Task<RVMNative.CreationResult> _creationTask;
-    WebCamTexture _webcam;
     RenderTexture _inputTexture;
     RenderTexture _alphaDisplayTexture;
     Texture2D[] _alphaTextures;
@@ -59,6 +58,7 @@ public sealed class RVMDemoController : MonoBehaviour
     {
         _disposed = false;
         _uiVersion = -1;
+        InitializeSources();
         _panelRenderer = GetComponent<PanelRenderer>();
         _panelRenderer.RegisterUIReloadCallback(OnUIReload);
 
@@ -70,7 +70,7 @@ public sealed class RVMDemoController : MonoBehaviour
 
         CreateMaterials();
         if (_preprocessMaterial == null || _visualizeMaterial == null) return;
-        StartCoroutine(StartCamera());
+        SelectSource(_selectedSourceIndex);
 
         var modelPath = Path.Combine(
             Application.streamingAssetsPath,
@@ -95,14 +95,20 @@ public sealed class RVMDemoController : MonoBehaviour
     void OnDisable()
     {
         _disposed = true;
+        _sourceGeneration++;
         StopAllCoroutines();
+        _switchCoroutine = null;
+        StopCurrentSource();
         if (_panelRenderer != null)
             _panelRenderer.UnregisterUIReloadCallback(OnUIReload);
         _panelRenderer = null;
         UnbindUI();
 
-        if (_webcam != null) _webcam.Stop();
-        _webcam = null;
+        if (_readbackPending)
+        {
+            AsyncGPUReadback.WaitAllRequests();
+            _readbackPending = false;
+        }
 
         if (_plugin != IntPtr.Zero) ReleaseAllAlphaSlots();
         ReleaseTexture(ref _inputTexture);
@@ -139,16 +145,21 @@ public sealed class RVMDemoController : MonoBehaviour
         _cameraImage = root.Q<Image>("cameraImage");
         _alphaImage = root.Q<Image>("alphaImage");
         _statusLabel = root.Q<Label>("statusLabel");
+        _sourceDropdown = root.Q<DropdownField>("sourceDropdown");
 
         _cameraImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.scaleMode = ScaleMode.ScaleToFit;
-        UpdateCameraImage();
+        BindSourceDropdown();
+        UpdateInputImage();
         _alphaImage.image = _alphaDisplayTexture;
         SetStatus(_statusMessage);
     }
 
     void UnbindUI()
     {
+        if (_sourceDropdown != null)
+            _sourceDropdown.UnregisterValueChangedCallback(OnSourceDropdownChanged);
+        _sourceDropdown = null;
         _cameraImage = null;
         _alphaImage = null;
         _statusLabel = null;
@@ -162,21 +173,6 @@ public sealed class RVMDemoController : MonoBehaviour
             _visualizeMaterial = new Material(_visualizeShader);
         if (_preprocessMaterial == null || _visualizeMaterial == null)
             SetStatus("Required RVM shaders could not be loaded.");
-    }
-
-    IEnumerator StartCamera()
-    {
-        if (!Application.HasUserAuthorization(UserAuthorization.WebCam))
-            yield return Application.RequestUserAuthorization(UserAuthorization.WebCam);
-        if (!Application.HasUserAuthorization(UserAuthorization.WebCam))
-        {
-            SetStatus("Camera access was denied.");
-            yield break;
-        }
-
-        _webcam = new WebCamTexture(1280, 720, 30);
-        _webcam.Play();
-        UpdateCameraImage();
     }
 
     void CompleteInitialization()
@@ -235,38 +231,53 @@ public sealed class RVMDemoController : MonoBehaviour
             return;
         }
 
-        UpdateCameraImage();
+        UpdateInputImage();
         if (_alphaImage != null) _alphaImage.image = _alphaDisplayTexture;
-        SetStatus(
-            $"Ready · {_inputWidth} × {_inputHeight} input · " +
-            $"{_alphaTextures.Length} alpha slots"
-        );
+        if (!string.IsNullOrEmpty(_sourceError))
+            SetStatus(_sourceError);
+        else
+            SetStatus(
+                $"Ready · {_inputWidth} × {_inputHeight} input · " +
+                $"{_alphaTextures.Length} alpha slots"
+            );
     }
 
     void ScheduleFrame()
     {
-        if (_webcam == null || !_webcam.isPlaying || !_webcam.didUpdateThisFrame) return;
-        if (_webcam.width <= 16 || _webcam.height <= 16) return;
         if (_readbackPending || RVMNative.RVMCanSubmit(_plugin) == 0) return;
         if (_preprocessMaterial == null) return;
+        if (!TryGetSourceFrame(
+                out var texture,
+                out var width,
+                out var height,
+                out var rotation,
+                out var mirrorY
+            ))
+            return;
 
         _preprocessMaterial.SetVector(
             "_SourceSize",
-            new Vector4(_webcam.width, _webcam.height, 0, 0)
+            new Vector4(width, height, 0, 0)
         );
-        _preprocessMaterial.SetFloat("_Rotation", _webcam.videoRotationAngle);
-        _preprocessMaterial.SetFloat("_MirrorY", _webcam.videoVerticallyMirrored ? 1 : 0);
+        _preprocessMaterial.SetFloat("_Rotation", rotation);
+        _preprocessMaterial.SetFloat("_MirrorY", mirrorY ? 1 : 0);
         _preprocessMaterial.SetFloat("_TargetAspect", (float)_inputWidth / _inputHeight);
-        Graphics.Blit(_webcam, _inputTexture, _preprocessMaterial);
+        Graphics.Blit(texture, _inputTexture, _preprocessMaterial);
 
+        var generation = _sourceGeneration;
         _readbackPending = true;
-        AsyncGPUReadback.Request(_inputTexture, 0, TextureFormat.BGRA32, OnReadback);
+        AsyncGPUReadback.Request(
+            _inputTexture,
+            0,
+            TextureFormat.BGRA32,
+            request => OnReadback(request, generation)
+        );
     }
 
-    unsafe void OnReadback(AsyncGPUReadbackRequest request)
+    unsafe void OnReadback(AsyncGPUReadbackRequest request, int generation)
     {
         _readbackPending = false;
-        if (_disposed || _plugin == IntPtr.Zero) return;
+        if (_disposed || generation != _sourceGeneration || _plugin == IntPtr.Zero) return;
         if (request.hasError)
         {
             SetStatus("GPU readback failed.");
@@ -282,7 +293,7 @@ public sealed class RVMDemoController : MonoBehaviour
             _inputHeight,
             _inputWidth * 4
         );
-        if (result < 0) SetStatus("Could not submit the camera frame.");
+        if (result < 0) SetStatus("Could not submit the input frame.");
         if (result == 0) SetStatus("Frame dropped · inference busy or no alpha slot.");
     }
 
@@ -427,14 +438,6 @@ public sealed class RVMDemoController : MonoBehaviour
             );
         }
         _alphaLeases.Clear();
-    }
-
-    void UpdateCameraImage()
-    {
-        if (_cameraImage == null) return;
-        var preprocessed = _inputTexture != null;
-        _cameraImage.image = preprocessed ? _inputTexture : _webcam;
-        _cameraImage.uv = preprocessed ? new Rect(0, 1, 1, -1) : new Rect(0, 0, 1, 1);
     }
 
     void SetStatus(string message)

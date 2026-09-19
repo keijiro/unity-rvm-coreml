@@ -25,3 +25,7 @@ Desktop.ini
 # Skills
 /skills-lock.json
 /.agents/skills
+
+# Test videos
+/Assets/StreamingAssets/*.mp4
+/Assets/StreamingAssets/*.mp4.meta

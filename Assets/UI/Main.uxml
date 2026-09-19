@@ -2,8 +2,17 @@
     <ui:Style src="../RVM/UI/Main.uss" />
     <ui:VisualElement name="root" class="screen">
         <ui:VisualElement class="header">
-            <ui:Label text="Inference time" class="status-label" />
-            <ui:Label name="statusLabel" class="status" />
+            <ui:VisualElement class="source-group">
+                <ui:Label text="Input" class="header-label" />
+                <ui:VisualElement class="source-control">
+                    <ui:DropdownField name="sourceDropdown" class="source-dropdown" />
+                    <ui:Label text="▾" picking-mode="Ignore" class="source-dropdown-icon" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="status-group">
+                <ui:Label text="Inference time" class="header-label" />
+                <ui:Label name="statusLabel" class="status" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="viewports">
             <ui:VisualElement class="viewport-panel viewport-panel-left">

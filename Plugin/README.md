@@ -37,6 +37,11 @@ generation token, then wraps the corresponding Metal handle as an external textu
 After queuing render work, Unity marks the slot as GPU-in-flight and releases it only
 after the graphics fence completes.
 
+`RVMResetState` drains the inference queue, discards an unpublished result, and clears
+the four recurrent tensors before another source or video loop begins. Slots already
+owned by Unity's GPU are still released through their normal fence and generation
+tokens before the reset call.
+
 The pool state machine is:
 
 ```text
