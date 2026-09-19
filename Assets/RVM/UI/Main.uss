@@ -1,9 +1,11 @@
 :root {
     flex-grow: 1;
-    --background: rgba(0, 0, 0, 0);
-    --text: #f2f2f2;
-    --muted: #a0a0a0;
-    --accent: #f2f2f2;
+    --background: #101318;
+    --surface: #191e25;
+    --border: #343d48;
+    --text: #e9edf2;
+    --muted: #98a5b5;
+    --accent: #a9d8d1;
 }
 
 .screen {
@@ -12,81 +14,89 @@
     top: 0;
     right: 0;
     bottom: 0;
-    padding: 24px;
+    padding: 28px;
     background-color: var(--background);
     color: var(--text);
 }
 
 .header {
-    position: absolute;
-    left: 24px;
-    right: 24px;
-    top: 24px;
     flex-direction: row;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: flex-end;
     justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--border);
 }
 
-.source-group,
+.source-group {
+    flex-grow: 1;
+    flex-basis: 320px;
+    max-width: 440px;
+    margin-right: 24px;
+    margin-top: 4px;
+}
+
 .status-group {
-    flex-direction: row;
-    align-items: center;
+    flex-shrink: 1;
+    margin-top: 16px;
 }
 
 .header-label {
-    margin-right: 8px;
+    margin: 0 0 8px 0;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 11px;
+    letter-spacing: 0.6px;
 }
 
 .source-control {
-    width: 420px;
-    height: 32px;
+    height: 40px;
 }
 
 .source-dropdown {
     flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
 }
 
 .source-dropdown > .unity-base-popup-field__input {
+    flex-grow: 1;
+    min-width: 0;
+    min-height: 40px;
+    margin: 0;
+    padding: 0 38px 0 14px;
     flex-direction: row;
     align-items: center;
-    padding-left: 11px;
-    padding-right: 34px;
-    background-color: #1b1f26;
-    border-left-width: 1px;
-    border-top-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-left-color: #626c7a;
-    border-top-color: #626c7a;
-    border-right-color: #626c7a;
-    border-bottom-color: #626c7a;
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
-    border-bottom-right-radius: 5px;
-    border-bottom-left-radius: 5px;
+    background-color: var(--surface);
+    border-width: 1px;
+    border-color: var(--border);
+    border-radius: 8px;
 }
 
 .source-dropdown:hover > .unity-base-popup-field__input {
-    background-color: #262c35;
-    border-left-color: #929cab;
-    border-top-color: #929cab;
-    border-right-color: #929cab;
-    border-bottom-color: #929cab;
+    background-color: #232c36;
+    border-color: #617384;
 }
 
 .source-dropdown:focus > .unity-base-popup-field__input {
-    border-left-color: #d5dbe3;
-    border-top-color: #d5dbe3;
-    border-right-color: #d5dbe3;
-    border-bottom-color: #d5dbe3;
+    border-color: var(--accent);
+}
+
+.source-dropdown:disabled > .unity-base-popup-field__input {
+    opacity: 0.45;
 }
 
 .source-dropdown .unity-base-popup-field__text {
     flex-grow: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
     color: var(--text);
-    font-size: 13px;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     -unity-text-align: middle-left;
 }
 
@@ -97,50 +107,64 @@
 .source-dropdown-icon {
     position: absolute;
     top: 0;
-    right: 10px;
+    right: 14px;
     bottom: 0;
-    width: 16px;
-    color: #bcc4ce;
-    font-size: 15px;
+    width: 12px;
+    margin: 0;
+    padding: 0;
+    color: var(--accent);
+    font-size: 16px;
     -unity-text-align: middle-center;
 }
 
 .status {
+    min-height: 40px;
+    margin: 0;
+    padding: 0;
     color: var(--accent);
-    font-size: 13px;
-    -unity-text-align: middle-right;
+    font-size: 12px;
+    white-space: normal;
+    -unity-text-align: middle-left;
 }
 
 .viewports {
-    position: absolute;
-    left: 24px;
-    right: 24px;
-    top: 64px;
-    bottom: 24px;
+    flex-grow: 1;
+    min-height: 0;
+    margin-top: 24px;
     flex-direction: row;
+    align-items: center;
 }
 
 .viewport-panel {
     flex-grow: 1;
     flex-basis: 0;
-    justify-content: center;
+    min-width: 0;
+    padding: 12px;
+    background-color: var(--surface);
+    border-width: 1px;
+    border-color: var(--border);
+    border-radius: 10px;
 }
 
 .viewport-panel-left {
-    margin-right: 6px;
+    margin-right: 10px;
 }
 
 .viewport-panel-right {
-    margin-left: 6px;
+    margin-left: 10px;
 }
 
 .viewport-title {
-    margin-bottom: 9px;
+    margin: 0 0 12px 0;
     color: var(--muted);
     font-size: 12px;
+    letter-spacing: 0.3px;
     white-space: nowrap;
 }
 
 .viewport-image {
     aspect-ratio: 1.777778;
+    background-color: #080a0d;
+    border-radius: 4px;
+    overflow: hidden;
 }
