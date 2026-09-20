@@ -105,9 +105,9 @@ public sealed class ProjectConfigurationTests
         Assert.That(output.width, Is.EqualTo(InputWidth));
         Assert.That(output.height, Is.EqualTo(InputHeight));
 
-        // An alpha-capable output contains source RGB and stores the matte only in A.
-        // The demo pane needs the no-alpha mode, which displays the matte as grayscale.
-        Assert.That(GraphicsFormatUtility.HasAlphaChannel(output.graphicsFormat), Is.False);
+        // All three demo panes derive from this paired RGB/alpha result so their
+        // color and matte always belong to the same submitted frame.
+        Assert.That(GraphicsFormatUtility.HasAlphaChannel(output.graphicsFormat), Is.True);
     }
 
     [Test]

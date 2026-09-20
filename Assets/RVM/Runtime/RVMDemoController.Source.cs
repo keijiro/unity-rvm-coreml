@@ -412,14 +412,8 @@ public sealed partial class RVMDemoController
     void UpdateInputImage()
     {
         if (_cameraImage == null) return;
-        var input = _generator?.ModelInput;
-        var preprocessed = input != null;
-        Texture source = null;
-        if (_currentSourceIndex >= 0 && _currentSourceIndex < _sources.Count)
-            source = _sources[_currentSourceIndex].Kind == InputSourceKind.Camera ?
-                _webcam : _videoPlayer.texture;
-        _cameraImage.image = preprocessed ? input : source;
-        _cameraImage.uv = preprocessed ? new Rect(0, 1, 1, -1) : new Rect(0, 0, 1, 1);
+        _cameraImage.image = _inputDisplayTexture;
+        _cameraImage.uv = new Rect(0, 0, 1, 1);
         _cameraImage.MarkDirtyRepaint();
     }
 
@@ -427,6 +421,8 @@ public sealed partial class RVMDemoController
     {
         ClearTexture(_generator?.ModelInput);
         ClearTexture(_generator?.Output);
+        ClearTexture(_inputDisplayTexture);
+        ClearTexture(_alphaDisplayTexture);
         ClearTexture(_compositeTexture);
         _cameraImage?.MarkDirtyRepaint();
         _alphaImage?.MarkDirtyRepaint();

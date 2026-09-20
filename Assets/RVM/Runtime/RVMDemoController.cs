@@ -27,7 +27,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _generator = GetComponent<MatteGenerator>();
 
         InitializeSources();
-        InitializeComposite();
+        InitializeOutputDisplay();
         _panelRenderer = GetComponent<PanelRenderer>();
         _panelRenderer.RegisterUIReloadCallback(OnUIReload);
         SelectSource(_selectedSourceIndex);
@@ -38,9 +38,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         if (TryGetSourceFrame(out var texture))
             _generator.Process(texture);
 
-        UpdateInputImage();
-        _alphaImage?.MarkDirtyRepaint();
-        UpdateComposite();
+        UpdateOutputDisplay();
         RefreshStatus();
     }
 
@@ -50,7 +48,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         StopAllCoroutines();
         _switchCoroutine = null;
         StopCurrentSource();
-        ReleaseComposite();
+        ReleaseOutputDisplay();
         if (_panelRenderer != null)
             _panelRenderer.UnregisterUIReloadCallback(OnUIReload);
         _panelRenderer = null;
@@ -74,7 +72,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _cameraImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.scaleMode = ScaleMode.ScaleToFit;
         _compositeImage.scaleMode = ScaleMode.ScaleToFit;
-        _alphaImage.image = _generator.Output;
+        _cameraImage.image = _inputDisplayTexture;
+        _alphaImage.image = _alphaDisplayTexture;
         _compositeImage.image = _compositeTexture;
         BindSourceDropdown();
         UpdateInputImage();
