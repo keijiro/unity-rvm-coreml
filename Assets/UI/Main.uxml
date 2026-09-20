@@ -9,6 +9,10 @@
                     <ui:Label text="▾" picking-mode="Ignore" class="source-dropdown-icon" />
                 </ui:VisualElement>
             </ui:VisualElement>
+            <ui:VisualElement class="sync-group">
+                <ui:Label text="Presentation" class="header-label" />
+                <ui:Toggle name="matteTriggeredSyncToggle" label="Matte-Triggered Sync" class="sync-toggle" />
+            </ui:VisualElement>
             <ui:VisualElement class="status-group">
                 <ui:Label text="Inference time" class="header-label" />
                 <ui:Label name="statusLabel" class="status" />

@@ -169,8 +169,7 @@ public sealed partial class RVMDemoController
         StopCurrentSource();
         SetStatus($"Switching to {_sources[index].DisplayName}…");
 
-        _generator.Reset();
-        ClearDisplayTextures();
+        ResetSynchronization();
         _currentSourceIndex = index;
         _sourceError = null;
 
@@ -292,8 +291,7 @@ public sealed partial class RVMDemoController
     {
         _videoPlayer.Pause();
         _videoFrameReady = false;
-        _generator.Reset();
-        ClearDisplayTextures();
+        ResetSynchronization();
         _videoPlayer.frame = 0;
         yield return null;
         if (generation != _sourceGeneration) yield break;
@@ -405,6 +403,7 @@ public sealed partial class RVMDemoController
 
     void SetSourceError(string message)
     {
+        ResetSynchronization();
         _sourceError = message;
         SetStatus(message);
     }
@@ -421,6 +420,8 @@ public sealed partial class RVMDemoController
     {
         ClearTexture(_generator?.ModelInput);
         ClearTexture(_generator?.Output);
+        ClearTexture(_presentedColorTexture);
+        ClearTexture(_presentedMatteTexture);
         ClearTexture(_inputDisplayTexture);
         ClearTexture(_alphaDisplayTexture);
         ClearTexture(_compositeTexture);

@@ -225,6 +225,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: 
   _compositeShader: {fileID: 4800000, guid: 090c9f1039de24c72abf4015296451f6, type: 3}
+  _preprocessShader: {fileID: 4800000, guid: a893605a8835f42bcb03057f06bf6899, type: 3}
 --- !u!328 &231048559
 VideoPlayer:
   m_ObjectHideFlags: 0

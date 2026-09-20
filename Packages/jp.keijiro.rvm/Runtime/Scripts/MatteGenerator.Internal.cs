@@ -23,6 +23,7 @@ public sealed partial class MatteGenerator
 #endif
 
     internal RenderTexture ModelInput => _inputTexture;
+    internal ulong OutputVersion { get; private set; }
 
     // Serialized resources
 
@@ -107,6 +108,7 @@ public sealed partial class MatteGenerator
         _resetRequested = false;
         _stateGeneration++;
         _expectedFrameNumber = 1;
+        OutputVersion = 0;
         InferenceTime = 0;
         LastError = null;
         EnsureOutput();
@@ -418,6 +420,11 @@ public sealed partial class MatteGenerator
             GraphicsFormatUtility.HasAlphaChannel(output.graphicsFormat) ? 1 : 0
         );
         Graphics.Blit(_alphaTextures[slotIndex], output, _outputMaterial);
+        // RenderTexture.updateCount doesn't change for render-target writes. This
+        // counter advances when the matching composite enters Unity's graphics
+        // stream, giving the demo a CPU-visible completion signal without making
+        // synchronization part of the public package API.
+        OutputVersion++;
         var fence = Graphics.CreateGraphicsFence(
             GraphicsFenceType.CPUSynchronisation,
             SynchronisationStageFlags.AllGPUOperations
@@ -448,6 +455,7 @@ public sealed partial class MatteGenerator
         _submittedOutput = null;
         _frameInFlight = false;
         _expectedFrameNumber = 1;
+        OutputVersion = 0;
         InferenceTime = 0;
         LastError = null;
         _resetRequested = false;

@@ -18,6 +18,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
     Image _alphaImage;
     Image _compositeImage;
     Label _statusLabel;
+    Toggle _matteTriggeredSyncToggle;
 
     // MonoBehaviour implementation
 
@@ -26,6 +27,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _uiVersion = -1;
         _generator = GetComponent<MatteGenerator>();
 
+        InitializePresentation();
         InitializeSources();
         InitializeOutputDisplay();
         _panelRenderer = GetComponent<PanelRenderer>();
@@ -36,8 +38,9 @@ public sealed partial class RVMDemoController : MonoBehaviour
     void Update()
     {
         if (TryGetSourceFrame(out var texture))
-            _generator.Process(texture);
+            EnqueuePresentationFrame(texture);
 
+        UpdatePresentation();
         UpdateOutputDisplay();
         RefreshStatus();
     }
@@ -48,6 +51,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         StopAllCoroutines();
         _switchCoroutine = null;
         StopCurrentSource();
+        ReleasePresentation();
         ReleaseOutputDisplay();
         if (_panelRenderer != null)
             _panelRenderer.UnregisterUIReloadCallback(OnUIReload);
@@ -68,6 +72,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _compositeImage = root.Q<Image>("compositeImage");
         _statusLabel = root.Q<Label>("statusLabel");
         _sourceDropdown = root.Q<DropdownField>("sourceDropdown");
+        _matteTriggeredSyncToggle = root.Q<Toggle>("matteTriggeredSyncToggle");
 
         _cameraImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.scaleMode = ScaleMode.ScaleToFit;
@@ -76,6 +81,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _alphaImage.image = _alphaDisplayTexture;
         _compositeImage.image = _compositeTexture;
         BindSourceDropdown();
+        BindMatteTriggeredSyncToggle();
         UpdateInputImage();
         RefreshStatus();
     }
@@ -84,7 +90,12 @@ public sealed partial class RVMDemoController : MonoBehaviour
     {
         if (_sourceDropdown != null)
             _sourceDropdown.UnregisterValueChangedCallback(OnSourceDropdownChanged);
+        if (_matteTriggeredSyncToggle != null)
+            _matteTriggeredSyncToggle.UnregisterValueChangedCallback(
+                OnMatteTriggeredSyncChanged
+            );
         _sourceDropdown = null;
+        _matteTriggeredSyncToggle = null;
         _cameraImage = null;
         _alphaImage = null;
         _compositeImage = null;

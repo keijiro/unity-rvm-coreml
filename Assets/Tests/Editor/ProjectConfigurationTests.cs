@@ -44,6 +44,7 @@ public sealed class ProjectConfigurationTests
         AssertElement<Image>(root, "alphaImage");
         AssertElement<Image>(root, "compositeImage");
         AssertElement<Label>(root, "statusLabel");
+        AssertElement<Toggle>(root, "matteTriggeredSyncToggle");
     }
 
     [TestCase(PreprocessShaderPath)]
