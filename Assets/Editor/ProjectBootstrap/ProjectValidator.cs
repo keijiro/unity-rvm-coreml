@@ -2,8 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using RVM;
@@ -11,7 +11,9 @@ using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 using Debug = UnityEngine.Debug;
@@ -22,8 +24,17 @@ namespace ProjectBootstrap
 public static class ProjectValidator
 {
     const string LibraryName = "RVMPlugin";
+    const string MainScenePath = "Assets/Main.unity";
+    const string MainUIPath = "Assets/UI/Main.uxml";
+    const string PanelSettingsPath = "Assets/UI/DefaultSettings.asset";
+    const string OutputTexturePath = "Assets/RVM/Runtime/RVMMatte.renderTexture";
+    const string PreprocessShaderPath = "Assets/RVM/Shaders/Preprocess.shader";
+    const string OutputShaderPath = "Assets/RVM/Shaders/VisualizeAlpha.shader";
+    const string PluginPath = "Assets/Plugins/macOS/RVMPlugin.bundle";
     const string ModelRelativePath =
         "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+    const string ModelSha256 =
+        "68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794";
     const int ErrorCapacity = 1024;
     const int InputWidth = 1280;
     const int InputHeight = 720;
@@ -108,9 +119,10 @@ public static class ProjectValidator
         try
         {
             ValidateUI();
-            ValidateVideoInputs();
             ValidateShaders();
-            ValidateMetal();
+            ValidateDemoScene();
+            ValidatePlatform();
+            ValidateNativeAssets();
             ValidateNativePlugin();
             Debug.Log("[ProjectValidator] All checks passed.");
             EditorApplication.Exit(0);
@@ -124,86 +136,159 @@ public static class ProjectValidator
 
     static void ValidateUI()
     {
-        var tree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/UI/Main.uxml");
-        if (tree == null) throw new InvalidOperationException("Main.uxml could not be loaded.");
+        var tree = LoadAsset<VisualTreeAsset>(MainUIPath);
         var root = tree.Instantiate();
-        foreach (var name in new[]
-                 {
-                     "sourceDropdown", "cameraImage", "alphaImage", "statusLabel"
-                 })
-            if (root.Q(name) == null)
-                throw new InvalidOperationException($"UI element '{name}' is missing.");
-        if (root.Q<DropdownField>("sourceDropdown") == null)
-            throw new InvalidOperationException("sourceDropdown is not a DropdownField.");
-    }
-
-    static void ValidateVideoInputs()
-    {
-        var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-        foreach (var path in new[]
-                 {
-                     "Packages/manifest.json",
-                     "Packages/packages-lock.json"
-                 })
-        {
-            var text = File.ReadAllText(Path.Combine(projectRoot, path));
-            if (!text.Contains("\"com.unity.modules.video\""))
-                throw new InvalidOperationException($"{path} does not include the video module.");
-        }
-
-        var method = typeof(RVMDemoController).GetMethod(
-            "EnumerateVideoPaths",
-            BindingFlags.NonPublic | BindingFlags.Static
-        );
-        if (method == null)
-            throw new InvalidOperationException("The MP4 catalog method is missing.");
-        var paths = (string[])method.Invoke(null, new object[]
-        {
-            Application.streamingAssetsPath
-        });
-        if (paths.Length < 2)
-            throw new InvalidOperationException("Fewer than two StreamingAssets MP4 files exist.");
-        if (!paths.SequenceEqual(paths.OrderBy(path => path, StringComparer.Ordinal)))
-            throw new InvalidOperationException("StreamingAssets MP4 files are not sorted.");
-        if (paths.Any(path => Path.IsPathRooted(path) || !string.Equals(
-                Path.GetExtension(path),
-                ".mp4",
-                StringComparison.OrdinalIgnoreCase
-            )))
-            throw new InvalidOperationException("The MP4 catalog contains an invalid relative path.");
-
-        EditorSceneManager.OpenScene("Assets/Main.unity", OpenSceneMode.Single);
-        var controller = UnityEngine.Object.FindAnyObjectByType<RVMDemoController>();
-        if (controller == null || controller.GetComponent<VideoPlayer>() == null)
-            throw new InvalidOperationException("Main scene has no configured VideoPlayer.");
+        RequireElement<DropdownField>(root, "sourceDropdown");
+        RequireElement<Image>(root, "cameraImage");
+        RequireElement<Image>(root, "alphaImage");
+        RequireElement<Label>(root, "statusLabel");
     }
 
     static void ValidateShaders()
     {
         foreach (var path in new[]
                  {
-                     "Assets/RVM/Shaders/Preprocess.shader",
-                     "Assets/RVM/Shaders/VisualizeAlpha.shader"
+                     PreprocessShaderPath,
+                     OutputShaderPath
                  })
         {
-            var shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
-            if (shader == null)
-                throw new InvalidOperationException($"{path} could not be loaded.");
+            var shader = LoadAsset<Shader>(path);
             foreach (var message in ShaderUtil.GetShaderMessages(shader))
                 if (message.severity == ShaderCompilerMessageSeverity.Error)
                     throw new InvalidOperationException($"{path}: {message.message}");
         }
     }
 
-    static void ValidateMetal()
+    static void ValidateDemoScene()
     {
+        if (!EditorBuildSettings.scenes.Any(scene =>
+                scene.enabled && scene.path == MainScenePath))
+            throw new InvalidOperationException(
+                $"{MainScenePath} is not enabled in the build settings."
+            );
+
+        var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
+        var controllers = scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<RVMDemoController>(true))
+            .ToArray();
+        if (controllers.Length != 1)
+            throw new InvalidOperationException(
+                $"{MainScenePath} must contain exactly one RVM demo controller."
+            );
+
+        var controller = controllers[0];
+        var panelRenderer = controller.GetComponent<PanelRenderer>();
+        var videoPlayer = controller.GetComponent<VideoPlayer>();
+        var processor = controller.GetComponent<RVMProcessor>();
+        if (!controller.isActiveAndEnabled || panelRenderer == null || videoPlayer == null ||
+            processor == null || !processor.enabled)
+            throw new InvalidOperationException(
+                "The RVM demo controller and its required components are not active and complete."
+            );
+
+        var panel = new SerializedObject(panelRenderer);
+        ValidateAssetReference(panel, "sourceAsset", MainUIPath);
+        ValidateAssetReference(panel, "m_PanelSettings", PanelSettingsPath);
+
+        var processorData = new SerializedObject(processor);
+        ValidateAssetReference(processorData, "_preprocessShader", PreprocessShaderPath);
+        ValidateAssetReference(processorData, "_outputShader", OutputShaderPath);
+
+        var output = processor.Output;
+        if (output == null || AssetDatabase.GetAssetPath(output) != OutputTexturePath ||
+            output.width != InputWidth || output.height != InputHeight)
+            throw new InvalidOperationException(
+                "The demo processor has no valid 1280 × 720 output RenderTexture."
+            );
+
+        // An alpha-capable output contains source RGB and stores the matte only in A.
+        // The demo pane needs the no-alpha mode, which displays the matte as grayscale.
+        if (GraphicsFormatUtility.HasAlphaChannel(output.graphicsFormat))
+            throw new InvalidOperationException(
+                "The demo output RenderTexture must use a format without alpha."
+            );
+
+        if (UnityEngine.Object.FindAnyObjectByType<Camera>() == null)
+            throw new InvalidOperationException($"{MainScenePath} has no active camera.");
+    }
+
+    static void ValidatePlatform()
+    {
+        if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneOSX)
+            throw new InvalidOperationException("The active build target is not macOS standalone.");
+
         var apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.StandaloneOSX);
-        if (!apis.Contains(GraphicsDeviceType.Metal))
-            throw new InvalidOperationException("Metal is not enabled for macOS standalone.");
+        if (apis.Length != 1 || apis[0] != GraphicsDeviceType.Metal)
+            throw new InvalidOperationException("Metal must be the only macOS graphics API.");
         if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Metal)
             throw new InvalidOperationException(
                 $"The validation Editor is using {SystemInfo.graphicsDeviceType}, not Metal."
             );
+        if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset)
+            throw new InvalidOperationException("The active render pipeline is not URP.");
+        if (!Version.TryParse(PlayerSettings.macOS.targetOSVersion, out var targetVersion) ||
+            targetVersion < new Version(13, 0))
+            throw new InvalidOperationException("The macOS deployment target must be 13.0 or later.");
+        if (string.IsNullOrWhiteSpace(PlayerSettings.macOS.cameraUsageDescription))
+            throw new InvalidOperationException("The macOS camera usage description is empty.");
+    }
+
+    static void ValidateNativeAssets()
+    {
+        var importer = AssetImporter.GetAtPath(PluginPath) as PluginImporter;
+        if (importer == null || importer.GetCompatibleWithAnyPlatform() ||
+            !importer.GetCompatibleWithEditor() ||
+            !importer.GetCompatibleWithPlatform(BuildTarget.StandaloneOSX))
+            throw new InvalidOperationException(
+                $"{PluginPath} is not configured as a macOS Editor/player plugin."
+            );
+
+        var modelPath = Path.Combine(Application.streamingAssetsPath, ModelRelativePath);
+        if (!File.Exists(modelPath))
+            throw new FileNotFoundException("The RVM model is missing.", modelPath);
+
+        using var stream = File.OpenRead(modelPath);
+        using var sha256 = SHA256.Create();
+        var hash = string.Concat(sha256.ComputeHash(stream).Select(value => value.ToString("x2")));
+        if (hash != ModelSha256)
+            throw new InvalidOperationException($"The RVM model SHA-256 is {hash}.");
+    }
+
+    static T LoadAsset<T>(string path) where T : UnityEngine.Object
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+        if (asset == null)
+            throw new InvalidOperationException($"{path} could not be loaded as {typeof(T).Name}.");
+        return asset;
+    }
+
+    static void RequireElement<T>(VisualElement root, string name) where T : VisualElement
+    {
+        var element = root.Q(name);
+        if (element == null)
+            throw new InvalidOperationException($"UI element '{name}' is missing.");
+        if (element is not T)
+            throw new InvalidOperationException(
+                $"UI element '{name}' is not a {typeof(T).Name}."
+            );
+    }
+
+    static void ValidateAssetReference(
+        SerializedObject serializedObject,
+        string propertyName,
+        string expectedPath
+    )
+    {
+        var property = serializedObject.FindProperty(propertyName);
+        var actualPath = property == null ? null :
+            AssetDatabase.GetAssetPath(property.objectReferenceValue);
+        if (actualPath != expectedPath)
+        {
+            var type = serializedObject.targetObject.GetType().Name;
+            throw new InvalidOperationException(
+                $"{type}.{propertyName} must reference {expectedPath}."
+            );
+        }
     }
 
     static void ValidateNativePlugin()
