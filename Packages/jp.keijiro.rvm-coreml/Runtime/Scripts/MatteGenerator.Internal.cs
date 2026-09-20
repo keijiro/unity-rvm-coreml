@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 
-namespace Rvm
+namespace Rvm.CoreML
 {
 
 public sealed partial class MatteGenerator
@@ -519,4 +519,4 @@ public sealed partial class MatteGenerator
     void SetError(string message) => LastError = message;
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML

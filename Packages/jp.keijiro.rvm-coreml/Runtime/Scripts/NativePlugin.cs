@@ -3,10 +3,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine.Scripting.APIUpdating;
 
-namespace Rvm
+namespace Rvm.CoreML
 {
 
-[MovedFrom(true, "RVM", "RVM.Runtime", "RVMComputeUnits")]
+[MovedFrom(true, "Rvm", "Rvm.Runtime")]
 public enum ComputeUnits
 {
     CpuOnly = 0,
@@ -267,4 +267,4 @@ internal static class NativePlugin
 #endif
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML

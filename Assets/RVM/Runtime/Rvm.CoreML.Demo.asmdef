@@ -1,7 +1,7 @@
 {
-  "name": "Rvm.Demo",
-  "rootNamespace": "Rvm",
+  "name": "Rvm.CoreML.Demo",
+  "rootNamespace": "Rvm.CoreML.Demo",
   "references": [
-    "Rvm.Runtime"
+    "Rvm.CoreML.Runtime"
   ]
 }

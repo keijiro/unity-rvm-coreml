@@ -145,8 +145,8 @@
       "dependencies": {},
       "url": "https://registry.npmjs.com"
     },
-    "jp.keijiro.rvm": {
-      "version": "file:jp.keijiro.rvm",
+    "jp.keijiro.rvm-coreml": {
+      "version": "file:jp.keijiro.rvm-coreml",
       "depth": 0,
       "source": "embedded",
       "dependencies": {

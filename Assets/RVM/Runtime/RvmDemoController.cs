@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
-[MovedFrom(true, "RVM", "RVM.Demo", "RVMDemoController")]
+[MovedFrom(true, "Rvm", "Rvm.Demo")]
 public sealed class RvmDemoController : MonoBehaviour
 {
     [SerializeField] RvmInputSource _source = null;
@@ -93,4 +93,4 @@ public sealed class RvmDemoController : MonoBehaviour
         _presentation.ResetSynchronization();
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

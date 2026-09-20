@@ -1,9 +1,9 @@
 {
-  "name": "Rvm.EditorTests",
-  "rootNamespace": "Rvm.Tests.Editor",
+  "name": "Rvm.CoreML.EditorTests",
+  "rootNamespace": "Rvm.CoreML.Tests.Editor",
   "references": [
-    "Rvm.Demo",
-    "Rvm.Runtime",
+    "Rvm.CoreML.Demo",
+    "Rvm.CoreML.Runtime",
     "Unity.RenderPipelines.Universal.Runtime"
   ],
   "includePlatforms": [

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 project_dir="${0:A:h}"
-model_dir="$project_dir/Packages/jp.keijiro.rvm/Runtime/Models"
+model_dir="$project_dir/Packages/jp.keijiro.rvm-coreml/Runtime/Models"
 model_name="rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel"
 model_url="https://github.com/PeterL1n/RobustVideoMatting/releases/download/v1.0.0/$model_name"
 model_sha256="68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794"

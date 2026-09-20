@@ -11,7 +11,7 @@ source_files=(
     "$native_dir/RVMAlphaTexturePool.mm"
 )
 plist_file="$native_dir/Info.plist"
-bundle_dir="$project_dir/Packages/jp.keijiro.rvm/Runtime/Plugins/macOS/RVMPlugin.bundle"
+bundle_dir="$project_dir/Packages/jp.keijiro.rvm-coreml/Runtime/Plugins/macOS/RVMPlugin.bundle"
 binary_dir="$bundle_dir/Contents/MacOS"
 unity_version=$(sed -n 's/^m_EditorVersion: //p' "$project_dir/ProjectSettings/ProjectVersion.txt")
 plugin_api_dir="/Applications/Unity/Hub/Editor/$unity_version/Unity.app/Contents/Resources/PluginAPI"

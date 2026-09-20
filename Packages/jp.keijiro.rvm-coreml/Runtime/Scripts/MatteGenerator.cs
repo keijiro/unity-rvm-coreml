@@ -2,10 +2,10 @@ using System;
 using UnityEngine;
 using UnityEngine.Scripting.APIUpdating;
 
-namespace Rvm
+namespace Rvm.CoreML
 {
 
-[MovedFrom(true, "RVM", "RVM.Runtime", "RVMProcessor")]
+[MovedFrom(true, "Rvm", "Rvm.Runtime")]
 public sealed partial class MatteGenerator : MonoBehaviour
 {
     // Public properties
@@ -37,4 +37,4 @@ public sealed partial class MatteGenerator : MonoBehaviour
     }
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML

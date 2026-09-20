@@ -103,7 +103,7 @@ Context *CreateContext(
         // RVM feeds each prediction's recurrent tensors into the next frame. A serial
         // queue preserves that temporal ordering without blocking Unity's main thread.
         context->queue = dispatch_queue_create(
-            "jp.keijiro.rvm.inference",
+            "jp.keijiro.rvm-coreml.inference",
             DISPATCH_QUEUE_SERIAL
         );
         return context;

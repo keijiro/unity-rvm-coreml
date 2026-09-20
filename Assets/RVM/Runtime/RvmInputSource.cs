@@ -4,9 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.Video;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
 internal readonly struct SourceFrame
@@ -22,6 +23,7 @@ internal readonly struct SourceFrame
 }
 
 [RequireComponent(typeof(VideoPlayer))]
+[MovedFrom(true, "Rvm", "Rvm.Demo")]
 public sealed class RvmInputSource : MonoBehaviour
 {
     const float CameraStartTimeout = 5;
@@ -426,4 +428,4 @@ public sealed class RvmInputSource : MonoBehaviour
     void SetStatus(string message) => _statusMessage = message;
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

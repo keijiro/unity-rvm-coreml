@@ -3,7 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
-using Rvm;
+using Rvm.CoreML;
+using Rvm.CoreML.Demo;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEditor.SceneManagement;
@@ -14,7 +15,7 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 
-namespace Rvm.Tests.Editor
+namespace Rvm.CoreML.Tests.Editor
 {
 
 public sealed class ProjectConfigurationTests
@@ -24,7 +25,7 @@ public sealed class ProjectConfigurationTests
     const string PanelSettingsPath = "Assets/UI/DefaultSettings.asset";
     const string OutputTexturePath = "Assets/RVM/Runtime/RVMMatte.renderTexture";
     const string CompositeShaderPath = "Assets/RVM/Runtime/TintedComposite.shader";
-    const string PackagePath = "Packages/jp.keijiro.rvm";
+    const string PackagePath = "Packages/jp.keijiro.rvm-coreml";
     const string PreprocessShaderPath = PackagePath + "/Runtime/Shaders/Preprocess.shader";
     const string OutputShaderPath = PackagePath + "/Runtime/Shaders/VisualizeAlpha.shader";
     const string PluginPath = PackagePath + "/Runtime/Plugins/macOS/RVMPlugin.bundle";
@@ -278,4 +279,4 @@ public sealed class ProjectConfigurationTests
     }
 }
 
-} // namespace Rvm.Tests.Editor
+} // namespace Rvm.CoreML.Tests.Editor

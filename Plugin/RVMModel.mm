@@ -196,7 +196,7 @@ NSURL *ResolveModelURL(NSString *path, NSError **error)
     if (cacheRoot == nil) return [MLModel compileModelAtURL:sourceURL error:error];
 
     auto cacheDirectory = [cacheRoot URLByAppendingPathComponent:
-        @"jp.keijiro.rvm-unity/CoreML" isDirectory:YES];
+        @"jp.keijiro.rvm-coreml/CoreML" isDirectory:YES];
     auto cacheName = [[path.lastPathComponent stringByDeletingPathExtension]
         stringByAppendingPathExtension:@"mlmodelc"];
     auto cachedURL = [cacheDirectory URLByAppendingPathComponent:cacheName isDirectory:YES];

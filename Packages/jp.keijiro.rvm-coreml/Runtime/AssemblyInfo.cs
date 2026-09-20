@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Rvm.Demo")]
+[assembly: InternalsVisibleTo("Rvm.CoreML.Demo")]

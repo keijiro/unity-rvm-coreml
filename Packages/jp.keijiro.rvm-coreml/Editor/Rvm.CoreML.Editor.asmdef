@@ -1,6 +1,6 @@
 {
-  "name": "Rvm.Editor",
-  "rootNamespace": "Rvm.Editor",
+  "name": "Rvm.CoreML.Editor",
+  "rootNamespace": "Rvm.CoreML.Editor",
   "includePlatforms": [
     "Editor"
   ]

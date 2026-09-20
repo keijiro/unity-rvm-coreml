@@ -1,6 +1,6 @@
 using System;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
 internal sealed class PresentationScheduler
@@ -86,4 +86,4 @@ internal sealed class PresentationScheduler
     }
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

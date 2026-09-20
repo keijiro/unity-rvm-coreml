@@ -1,7 +1,7 @@
 {
-  "name": "jp.keijiro.rvm",
+  "name": "jp.keijiro.rvm-coreml",
   "version": "1.0.0",
-  "displayName": "RVM",
+  "displayName": "RVM Core ML",
   "description": "Real-time Robust Video Matting for macOS using Core ML and Metal.",
   "unity": "6000.0",
   "dependencies": {

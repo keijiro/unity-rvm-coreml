@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>RVMPlugin</string>
     <key>CFBundleIdentifier</key>
-    <string>jp.keijiro.rvm.plugin</string>
+    <string>jp.keijiro.rvm-coreml.plugin</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
+[MovedFrom(true, "Rvm", "Rvm.Demo")]
 [RequireComponent(typeof(MatteGenerator))]
 public sealed class RvmPresentationPipeline : MonoBehaviour
 {
@@ -329,4 +331,4 @@ public sealed class RvmPresentationPipeline : MonoBehaviour
     }
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

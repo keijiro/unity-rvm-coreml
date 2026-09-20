@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 using UnityEngine.UIElements;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
+[MovedFrom(true, "Rvm", "Rvm.Demo")]
 [RequireComponent(typeof(PanelRenderer))]
 public sealed class RvmDemoView : MonoBehaviour
 {
@@ -189,4 +191,4 @@ public sealed class RvmDemoView : MonoBehaviour
     }
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

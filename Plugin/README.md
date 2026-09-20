@@ -22,7 +22,7 @@ The implementation is split into a C entry point and three internal components:
   overwriting a surface while Unity's GPU is still sampling it.
 
 `Info.plist` supplies the bundle metadata used when the compiled binary is installed
-under `Packages/jp.keijiro.rvm/Runtime/Plugins/macOS/RVMPlugin.bundle`.
+under `Packages/jp.keijiro.rvm-coreml/Runtime/Plugins/macOS/RVMPlugin.bundle`.
 
 ## Frame lifecycle
 
@@ -81,9 +81,9 @@ From the repository root, run:
 The script reads the Unity version from `ProjectSettings/ProjectVersion.txt`, uses
 that Editor's native plugin headers, and builds a universal arm64/x86_64 bundle for
 macOS 13 or newer. It installs and ad-hoc signs the result at
-`Packages/jp.keijiro.rvm/Runtime/Plugins/macOS/RVMPlugin.bundle`.
+`Packages/jp.keijiro.rvm-coreml/Runtime/Plugins/macOS/RVMPlugin.bundle`.
 
 The source is Objective-C++17 compiled with ARC and links Foundation, Core ML, Core
 Video, IOSurface, and Metal. Loading a source `.mlmodel` compiles it into the user's
-cache at `~/Library/Caches/jp.keijiro.rvm-unity/CoreML`; remove the matching cached
+cache at `~/Library/Caches/jp.keijiro.rvm-coreml/CoreML`; remove the matching cached
 `.mlmodelc` directory when replacing a model without changing its filename.

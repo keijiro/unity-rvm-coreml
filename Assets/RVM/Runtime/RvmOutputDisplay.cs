@@ -1,8 +1,10 @@
 using UnityEngine;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace Rvm
+namespace Rvm.CoreML.Demo
 {
 
+[MovedFrom(true, "Rvm", "Rvm.Demo")]
 public sealed class RvmOutputDisplay : MonoBehaviour
 {
     const int InputPass = 0;
@@ -178,4 +180,4 @@ public sealed class RvmOutputDisplay : MonoBehaviour
     }
 }
 
-} // namespace Rvm
+} // namespace Rvm.CoreML.Demo

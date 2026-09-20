@@ -1,6 +1,6 @@
-# RVM
+# RVM Core ML
 
-This package provides `Rvm.MatteGenerator`, a macOS implementation of Robust Video
+This package provides `Rvm.CoreML.MatteGenerator`, a macOS implementation of Robust Video
 Matting using Core ML and Metal. It includes the native plugin, shaders, and the
 fixed-shape 1280 x 720 MobileNetV3 model required by the generator.
 

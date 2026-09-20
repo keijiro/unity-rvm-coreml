@@ -1,5 +1,5 @@
 {
-  "name": "Rvm.Runtime",
-  "rootNamespace": "Rvm",
+  "name": "Rvm.CoreML.Runtime",
+  "rootNamespace": "Rvm.CoreML",
   "allowUnsafeCode": true
 }

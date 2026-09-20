@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using NUnit.Framework;
-using Rvm;
+using Rvm.CoreML;
 
-namespace Rvm.Tests.Editor
+namespace Rvm.CoreML.Tests.Editor
 {
 
 [Category("NativeIntegration")]
@@ -15,7 +15,7 @@ namespace Rvm.Tests.Editor
 public sealed class NativePluginIntegrationTests
 {
     const string LibraryName = "RVMPlugin";
-    const string ModelPath = "Packages/jp.keijiro.rvm/Runtime/Models/" +
+    const string ModelPath = "Packages/jp.keijiro.rvm-coreml/Runtime/Models/" +
         "rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
     const int ErrorCapacity = 1024;
     const int InputWidth = 1280;
@@ -393,4 +393,4 @@ public sealed class NativePluginIntegrationTests
     }
 }
 
-} // namespace Rvm.Tests.Editor
+} // namespace Rvm.CoreML.Tests.Editor

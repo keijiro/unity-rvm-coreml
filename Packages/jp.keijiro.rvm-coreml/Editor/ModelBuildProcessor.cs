@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor.Build;
 using UnityEditor.PackageManager;
 
-namespace Rvm.Editor
+namespace Rvm.CoreML.Editor
 {
 
 internal sealed class ModelBuildProcessor : BuildPlayerProcessor
@@ -25,4 +25,4 @@ internal sealed class ModelBuildProcessor : BuildPlayerProcessor
     }
 }
 
-} // namespace Rvm.Editor
+} // namespace Rvm.CoreML.Editor
