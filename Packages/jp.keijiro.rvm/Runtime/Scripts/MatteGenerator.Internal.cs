@@ -75,7 +75,6 @@ public sealed partial class MatteGenerator
             "_SourceSize",
             new Vector4(input.width, input.height, 0, 0)
         );
-        _preprocessMaterial.SetFloat("_Rotation", InputRotation);
         _preprocessMaterial.SetFloat("_MirrorY", InputMirrorY ? 1 : 0);
         _preprocessMaterial.SetFloat(
             "_TargetAspect",

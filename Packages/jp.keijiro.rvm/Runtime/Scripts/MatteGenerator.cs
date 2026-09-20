@@ -22,9 +22,6 @@ public sealed partial class MatteGenerator : MonoBehaviour
     public ComputeUnits ComputeUnits { get; set; } = ComputeUnits.All;
 
     [field:SerializeField]
-    public float InputRotation { get; set; }
-
-    [field:SerializeField]
     public bool InputMirrorY { get; set; }
 
     public bool IsReady =>

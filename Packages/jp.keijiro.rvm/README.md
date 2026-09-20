@@ -39,7 +39,7 @@ serial inference queue, and IOSurface-backed alpha buffers.
 
 ### Frame data flow
 
-1. `Preprocess.shader` center-crops, rotates, mirrors, and scales the source into a
+1. `Preprocess.shader` center-crops, mirrors, and scales the source into a
    fixed 1280 x 720 `RenderTexture`. This normalized image is retained as the RGB
    source for the final result.
 2. `AsyncGPUReadback` returns that texture as BGRA bytes. The C# layer passes a

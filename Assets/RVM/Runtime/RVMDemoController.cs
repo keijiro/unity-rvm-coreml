@@ -33,13 +33,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
 
     void Update()
     {
-        if (TryGetSourceFrame(
-                out var texture,
-                out var rotation,
-                out var mirrorY
-            ))
+        if (TryGetSourceFrame(out var texture, out var mirrorY))
         {
-            _generator.InputRotation = rotation;
             _generator.InputMirrorY = mirrorY;
             _generator.Process(texture);
         }

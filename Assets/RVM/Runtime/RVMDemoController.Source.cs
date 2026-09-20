@@ -343,14 +343,9 @@ public sealed partial class RVMDemoController
     bool IsCurrentVideoEvent(VideoPlayer player, int generation) =>
         generation == _sourceGeneration && player == _videoPlayer;
 
-    bool TryGetSourceFrame(
-        out Texture texture,
-        out int rotation,
-        out bool mirrorY
-    )
+    bool TryGetSourceFrame(out Texture texture, out bool mirrorY)
     {
         texture = null;
-        rotation = 0;
         mirrorY = false;
         if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count) return false;
 
@@ -360,7 +355,6 @@ public sealed partial class RVMDemoController
                 _webcam.width <= 16 || _webcam.height <= 16)
                 return false;
             texture = _webcam;
-            rotation = _webcam.videoRotationAngle;
             mirrorY = _webcam.videoVerticallyMirrored;
         }
         else
