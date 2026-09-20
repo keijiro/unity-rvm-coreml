@@ -222,7 +222,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c3d713e172b345dd99ccd8778cce036, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: 
 --- !u!328 &231048559
 VideoPlayer:
@@ -269,7 +269,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 74b4b7f0895c4c4aa839931256235a84, type: 3}
   m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::RVM.RVMProcessor
+  m_EditorClassIdentifier: RVM.Runtime::Rvm.MatteGenerator
   <Input>k__BackingField: {fileID: 0}
   <Output>k__BackingField: {fileID: 8400000, guid: d9aa3749147b54f948dfa2b3859b2ea7, type: 2}
   <ComputeUnits>k__BackingField: 2

@@ -2,7 +2,7 @@
 
 This directory contains the macOS native half of the RVM integration. It loads and
 runs the fixed-shape Core ML model, exposes its alpha output as Metal textures, and
-presents a C ABI that Unity calls through `RVMNative.cs`.
+presents a C ABI that Unity calls through `NativePlugin.cs`.
 
 ## Structure
 

@@ -1,3 +1,4 @@
+using Rvm;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
@@ -5,10 +6,10 @@ using UnityEngine.Video;
 namespace RVM
 {
 
-[RequireComponent(typeof(PanelRenderer), typeof(VideoPlayer), typeof(RVMProcessor))]
+[RequireComponent(typeof(PanelRenderer), typeof(VideoPlayer), typeof(MatteGenerator))]
 public sealed partial class RVMDemoController : MonoBehaviour
 {
-    RVMProcessor _processor;
+    MatteGenerator _generator;
     int _uiVersion = -1;
     string _statusMessage;
 
@@ -22,7 +23,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
     void OnEnable()
     {
         _uiVersion = -1;
-        _processor = GetComponent<RVMProcessor>();
+        _generator = GetComponent<MatteGenerator>();
 
         InitializeSources();
         _panelRenderer = GetComponent<PanelRenderer>();
@@ -38,9 +39,9 @@ public sealed partial class RVMDemoController : MonoBehaviour
                 out var mirrorY
             ))
         {
-            _processor.InputRotation = rotation;
-            _processor.InputMirrorY = mirrorY;
-            _processor.Process(texture);
+            _generator.InputRotation = rotation;
+            _generator.InputMirrorY = mirrorY;
+            _generator.Process(texture);
         }
 
         UpdateInputImage();
@@ -59,7 +60,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _panelRenderer = null;
         UnbindUI();
 
-        _processor = null;
+        _generator = null;
     }
 
     void OnUIReload(PanelRenderer renderer, VisualElement root, int version)
@@ -75,7 +76,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
 
         _cameraImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.scaleMode = ScaleMode.ScaleToFit;
-        _alphaImage.image = _processor.Output;
+        _alphaImage.image = _generator.Output;
         BindSourceDropdown();
         UpdateInputImage();
         RefreshStatus();
@@ -100,14 +101,14 @@ public sealed partial class RVMDemoController : MonoBehaviour
     void RefreshStatus()
     {
         if (_statusLabel == null) return;
-        if (!string.IsNullOrEmpty(_processor?.LastError))
+        if (!string.IsNullOrEmpty(_generator?.LastError))
         {
-            _statusLabel.text = _processor.LastError;
+            _statusLabel.text = _generator.LastError;
             return;
         }
 
-        _statusLabel.text = _processor != null && _processor.InferenceTime > 0 ?
-            $"{_processor.InferenceTime:F1} ms · {_statusMessage}" : _statusMessage;
+        _statusLabel.text = _generator != null && _generator.InferenceTime > 0 ?
+            $"{_generator.InferenceTime:F1} ms · {_statusMessage}" : _statusMessage;
     }
 }
 

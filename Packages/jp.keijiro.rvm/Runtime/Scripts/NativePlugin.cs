@@ -1,11 +1,13 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace RVM
+namespace Rvm
 {
 
-public enum RVMComputeUnits
+[MovedFrom(true, "RVM", "RVM.Runtime", "RVMComputeUnits")]
+public enum ComputeUnits
 {
     CpuOnly = 0,
     CpuAndGpu = 1,
@@ -13,7 +15,7 @@ public enum RVMComputeUnits
     CpuAndNeuralEngine = 3
 }
 
-internal static class RVMNative
+internal static class NativePlugin
 {
     // Keep these declarations aligned with RVMPlugin's C ABI. In particular, the
     // integer return values encode success, retry, and error states rather than bools.
@@ -36,7 +38,7 @@ internal static class RVMNative
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     static extern IntPtr RVMCreateWithComputeUnits(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string modelPath,
-        RVMComputeUnits computeUnits,
+        ComputeUnits computeUnits,
         StringBuilder errorBuffer,
         int errorCapacity
     );
@@ -104,7 +106,7 @@ internal static class RVMNative
         ulong generation
     );
 
-    internal static CreationResult Create(string modelPath, RVMComputeUnits computeUnits)
+    internal static CreationResult Create(string modelPath, ComputeUnits computeUnits)
     {
         var error = new StringBuilder(ErrorCapacity);
         var handle = RVMCreateWithComputeUnits(
@@ -149,7 +151,7 @@ internal static class RVMNative
     // assemblies import on unsupported build targets.
     internal static void EnsureLoaded() { }
 
-    internal static CreationResult Create(string modelPath, RVMComputeUnits computeUnits) =>
+    internal static CreationResult Create(string modelPath, ComputeUnits computeUnits) =>
         new(IntPtr.Zero, "RVM inference is supported only on macOS.");
 
     internal static void RVMDestroy(IntPtr handle) { }
@@ -217,4 +219,4 @@ internal static class RVMNative
 #endif
 }
 
-} // namespace RVM
+} // namespace Rvm

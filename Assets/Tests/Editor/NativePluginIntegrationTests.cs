@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using NUnit.Framework;
+using Rvm;
 
 namespace RVM.Tests.Editor
 {
@@ -29,7 +30,7 @@ public sealed class NativePluginIntegrationTests
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     static extern IntPtr RVMCreateWithComputeUnits(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string modelPath,
-        RVMComputeUnits computeUnits,
+        ComputeUnits computeUnits,
         StringBuilder errorBuffer,
         int errorCapacity
     );
@@ -104,7 +105,7 @@ public sealed class NativePluginIntegrationTests
         var error = new StringBuilder(ErrorCapacity);
         _handle = RVMCreateWithComputeUnits(
             modelPath,
-            RVMComputeUnits.All,
+            ComputeUnits.All,
             error,
             error.Capacity
         );

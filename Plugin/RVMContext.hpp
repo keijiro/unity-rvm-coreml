@@ -9,7 +9,7 @@ namespace rvm
 
 struct Context;
 
-// These values are part of the C ABI consumed by RVMComputeUnits in Unity. Keep
+// These values are part of the C ABI consumed by ComputeUnits in Unity. Keep
 // their numeric representation synchronized when adding a new Core ML mode.
 enum class ComputeUnits
 {

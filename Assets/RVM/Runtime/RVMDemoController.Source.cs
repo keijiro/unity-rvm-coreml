@@ -168,7 +168,7 @@ public sealed partial class RVMDemoController
         StopCurrentSource();
         SetStatus($"Switching to {_sources[index].DisplayName}…");
 
-        _processor.Reset();
+        _generator.Reset();
         ClearDisplayTextures();
         _currentSourceIndex = index;
         _sourceError = null;
@@ -291,7 +291,7 @@ public sealed partial class RVMDemoController
     {
         _videoPlayer.Pause();
         _videoFrameReady = false;
-        _processor.Reset();
+        _generator.Reset();
         ClearDisplayTextures();
         _videoPlayer.frame = 0;
         yield return null;
@@ -384,7 +384,7 @@ public sealed partial class RVMDemoController
     void UpdateInputImage()
     {
         if (_cameraImage == null) return;
-        var input = _processor?.ModelInput;
+        var input = _generator?.ModelInput;
         var preprocessed = input != null;
         Texture source = null;
         if (_currentSourceIndex >= 0 && _currentSourceIndex < _sources.Count)
@@ -397,8 +397,8 @@ public sealed partial class RVMDemoController
 
     void ClearDisplayTextures()
     {
-        ClearTexture(_processor?.ModelInput);
-        ClearTexture(_processor?.Output);
+        ClearTexture(_generator?.ModelInput);
+        ClearTexture(_generator?.Output);
         _cameraImage?.MarkDirtyRepaint();
         _alphaImage?.MarkDirtyRepaint();
     }

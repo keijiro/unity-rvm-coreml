@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
-using RVM;
+using Rvm;
 using UnityEditor;
 using UnityEditor.Rendering;
 using UnityEditor.SceneManagement;
@@ -74,8 +74,8 @@ public sealed class ProjectConfigurationTests
         Assert.That(controller.isActiveAndEnabled, Is.True);
         Assert.That(controller.GetComponent<PanelRenderer>(), Is.Not.Null);
         Assert.That(controller.GetComponent<VideoPlayer>(), Is.Not.Null);
-        Assert.That(controller.GetComponent<RVMProcessor>(), Is.Not.Null);
-        Assert.That(controller.GetComponent<RVMProcessor>().enabled, Is.True);
+        Assert.That(controller.GetComponent<MatteGenerator>(), Is.Not.Null);
+        Assert.That(controller.GetComponent<MatteGenerator>().enabled, Is.True);
     }
 
     [Test]
@@ -83,18 +83,18 @@ public sealed class ProjectConfigurationTests
     {
         var controller = OpenDemoController();
         var panel = new SerializedObject(controller.GetComponent<PanelRenderer>());
-        var processor = new SerializedObject(controller.GetComponent<RVMProcessor>());
+        var generator = new SerializedObject(controller.GetComponent<MatteGenerator>());
 
         AssertAssetReference(panel, "sourceAsset", MainUIPath);
         AssertAssetReference(panel, "m_PanelSettings", PanelSettingsPath);
-        AssertAssetReference(processor, "_preprocessShader", PreprocessShaderPath);
-        AssertAssetReference(processor, "_outputShader", OutputShaderPath);
+        AssertAssetReference(generator, "_preprocessShader", PreprocessShaderPath);
+        AssertAssetReference(generator, "_outputShader", OutputShaderPath);
     }
 
     [Test]
     public void DemoOutputMatchesDisplayContract()
     {
-        var output = OpenDemoController().GetComponent<RVMProcessor>().Output;
+        var output = OpenDemoController().GetComponent<MatteGenerator>().Output;
         Assert.That(output, Is.Not.Null);
         Assert.That(AssetDatabase.GetAssetPath(output), Is.EqualTo(OutputTexturePath));
         Assert.That(output.width, Is.EqualTo(InputWidth));

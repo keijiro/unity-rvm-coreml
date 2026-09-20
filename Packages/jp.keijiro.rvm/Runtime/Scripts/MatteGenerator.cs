@@ -6,11 +6,13 @@ using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
+using UnityEngine.Scripting.APIUpdating;
 
-namespace RVM
+namespace Rvm
 {
 
-public sealed class RVMProcessor : MonoBehaviour
+[MovedFrom(true, "RVM", "RVM.Runtime", "RVMProcessor")]
+public sealed class MatteGenerator : MonoBehaviour
 {
     const int ModelInputWidth = 1280;
     const int ModelInputHeight = 720;
@@ -33,7 +35,7 @@ public sealed class RVMProcessor : MonoBehaviour
     public double InferenceTime { get; private set; }
 
     [field:SerializeField]
-    public RVMComputeUnits ComputeUnits { get; set; } = RVMComputeUnits.All;
+    public ComputeUnits ComputeUnits { get; set; } = ComputeUnits.All;
 
     [field:SerializeField]
     public float InputRotation { get; set; }
@@ -71,7 +73,7 @@ public sealed class RVMProcessor : MonoBehaviour
     }
 
     IntPtr _plugin;
-    Task<RVMNative.CreationResult> _creationTask;
+    Task<NativePlugin.CreationResult> _creationTask;
     RenderTexture _inputTexture;
     RenderTexture _ownedOutput;
     RenderTexture _submittedOutput;
@@ -92,7 +94,7 @@ public sealed class RVMProcessor : MonoBehaviour
     {
         if (!IsReady || _disposed || _resetRequested || _readbackPending ||
             _frameInFlight || input == null || input.width <= 0 || input.height <= 0 ||
-            RVMNative.RVMCanSubmit(_plugin) == 0 || !EnsureOutput())
+            NativePlugin.RVMCanSubmit(_plugin) == 0 || !EnsureOutput())
             return false;
 
         _preprocessMaterial.SetVector(
@@ -154,8 +156,8 @@ public sealed class RVMProcessor : MonoBehaviour
 
         var modelPath = GetModelPath();
         var computeUnits = ComputeUnits;
-        RVMNative.EnsureLoaded();
-        _creationTask = Task.Run(() => RVMNative.Create(modelPath, computeUnits));
+        NativePlugin.EnsureLoaded();
+        _creationTask = Task.Run(() => NativePlugin.Create(modelPath, computeUnits));
     }
 
     void Update()
@@ -200,7 +202,7 @@ public sealed class RVMProcessor : MonoBehaviour
 
         if (_plugin != IntPtr.Zero)
         {
-            RVMNative.RVMDestroy(_plugin);
+            NativePlugin.RVMDestroy(_plugin);
             _plugin = IntPtr.Zero;
         }
 
@@ -211,7 +213,7 @@ public sealed class RVMProcessor : MonoBehaviour
         {
             if (completed.Status != TaskStatus.RanToCompletion) return;
             if (completed.Result.Handle != IntPtr.Zero)
-                RVMNative.RVMDestroy(completed.Result.Handle);
+                NativePlugin.RVMDestroy(completed.Result.Handle);
         });
     }
 
@@ -221,7 +223,7 @@ public sealed class RVMProcessor : MonoBehaviour
     {
 #if UNITY_EDITOR
         var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
-            typeof(RVMProcessor).Assembly
+            typeof(MatteGenerator).Assembly
         );
         return Path.Combine(package.resolvedPath, ModelPackagePath);
 #else
@@ -254,7 +256,7 @@ public sealed class RVMProcessor : MonoBehaviour
         _creationTask = null;
         if (_disposed)
         {
-            if (result.Handle != IntPtr.Zero) RVMNative.RVMDestroy(result.Handle);
+            if (result.Handle != IntPtr.Zero) NativePlugin.RVMDestroy(result.Handle);
             return;
         }
         if (result.Handle == IntPtr.Zero)
@@ -264,12 +266,12 @@ public sealed class RVMProcessor : MonoBehaviour
         }
 
         _plugin = result.Handle;
-        var width = RVMNative.RVMGetInputWidth(_plugin);
-        var height = RVMNative.RVMGetInputHeight(_plugin);
+        var width = NativePlugin.RVMGetInputWidth(_plugin);
+        var height = NativePlugin.RVMGetInputHeight(_plugin);
         if (width != ModelInputWidth || height != ModelInputHeight)
         {
             SetError($"Unexpected model input size: {width} × {height}.");
-            RVMNative.RVMDestroy(_plugin);
+            NativePlugin.RVMDestroy(_plugin);
             _plugin = IntPtr.Zero;
             return;
         }
@@ -289,7 +291,7 @@ public sealed class RVMProcessor : MonoBehaviour
         _inputTexture.Create();
         if (!CreateAlphaTextures())
         {
-            RVMNative.RVMDestroy(_plugin);
+            NativePlugin.RVMDestroy(_plugin);
             _plugin = IntPtr.Zero;
         }
     }
@@ -319,7 +321,7 @@ public sealed class RVMProcessor : MonoBehaviour
 
     bool CreateAlphaTextures()
     {
-        var count = RVMNative.RVMGetAlphaSlotCount(_plugin);
+        var count = NativePlugin.RVMGetAlphaSlotCount(_plugin);
         if (count != AlphaSlotCount)
         {
             SetError($"Unexpected native alpha slot count: {count}.");
@@ -329,7 +331,7 @@ public sealed class RVMProcessor : MonoBehaviour
         _alphaTextures = new Texture2D[count];
         for (var index = 0; index < count; index++)
         {
-            var result = RVMNative.RVMGetAlphaTextureInfo(
+            var result = NativePlugin.RVMGetAlphaTextureInfo(
                 _plugin,
                 index,
                 out var width,
@@ -374,7 +376,7 @@ public sealed class RVMProcessor : MonoBehaviour
 
         var source = request.GetData<byte>();
         var pointer = (IntPtr)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(source);
-        var result = RVMNative.RVMSubmitBGRA(
+        var result = NativePlugin.RVMSubmitBGRA(
             _plugin,
             pointer,
             ModelInputWidth,
@@ -403,7 +405,7 @@ public sealed class RVMProcessor : MonoBehaviour
     void ReceiveOutput()
     {
         if (!_frameInFlight) return;
-        var result = RVMNative.TryGetOutputInfo(
+        var result = NativePlugin.TryGetOutputInfo(
             _plugin,
             out var width,
             out var height,
@@ -428,7 +430,7 @@ public sealed class RVMProcessor : MonoBehaviour
             _frameInFlight = false;
             SetError("The native plugin returned mismatched alpha output metadata.");
             if (slotIndex >= 0)
-                RVMNative.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
+                NativePlugin.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
             return;
         }
 
@@ -437,7 +439,7 @@ public sealed class RVMProcessor : MonoBehaviour
         {
             _frameInFlight = false;
             SetError("The output RenderTexture is no longer valid.");
-            RVMNative.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
+            NativePlugin.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
             return;
         }
 
@@ -455,7 +457,7 @@ public sealed class RVMProcessor : MonoBehaviour
             SynchronisationStageFlags.AllGPUOperations
         );
         _alphaLeases.Add(new AlphaLease(slotIndex, generation, fence));
-        if (RVMNative.RVMMarkAlphaSlotGPUInFlight(
+        if (NativePlugin.RVMMarkAlphaSlotGPUInFlight(
                 _plugin,
                 slotIndex,
                 generation
@@ -476,7 +478,7 @@ public sealed class RVMProcessor : MonoBehaviour
         if (_alphaLeases.Count > 0) return;
 
         ReleaseAllAlphaSlots();
-        RVMNative.RVMResetState(_plugin);
+        NativePlugin.RVMResetState(_plugin);
         _submittedOutput = null;
         _frameInFlight = false;
         _expectedFrameNumber = 1;
@@ -494,7 +496,7 @@ public sealed class RVMProcessor : MonoBehaviour
         {
             var lease = _alphaLeases[index];
             if (!lease.Fence.passed) continue;
-            RVMNative.RVMReleaseAlphaSlot(
+            NativePlugin.RVMReleaseAlphaSlot(
                 _plugin,
                 lease.SlotIndex,
                 lease.Generation
@@ -507,7 +509,7 @@ public sealed class RVMProcessor : MonoBehaviour
     {
         foreach (var lease in _alphaLeases)
         {
-            RVMNative.RVMReleaseAlphaSlot(
+            NativePlugin.RVMReleaseAlphaSlot(
                 _plugin,
                 lease.SlotIndex,
                 lease.Generation
@@ -543,4 +545,4 @@ public sealed class RVMProcessor : MonoBehaviour
     void SetError(string message) => LastError = message;
 }
 
-} // namespace RVM
+} // namespace Rvm

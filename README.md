@@ -11,20 +11,20 @@ This macOS-only Unity 6 project runs Robust Video Matting (RVM) continuously on 
 
 Open the project with Unity `6000.6.1f1` and run `Assets/Main.unity`. The Editor and standalone player require Metal and macOS 13 or newer.
 
-## RVMProcessor
+## MatteGenerator
 
-Add `RVMProcessor` to a GameObject to use the inference pipeline independently of
+Add `Rvm.MatteGenerator` to a GameObject to use the inference pipeline independently of
 the demo. `ComputeUnits` selects `CpuOnly`, `CpuAndGpu`, `All`, or
 `CpuAndNeuralEngine`; changes take effect the next time the component is enabled.
 
 Assign a `Texture` to `Input` in the Inspector or from C# for continuous processing.
-The processor center-crops each available frame to the model's 1280 × 720 aspect
+The generator center-crops each available frame to the model's 1280 × 720 aspect
 ratio. Camera integrations can also set `InputRotation` and `InputMirrorY`.
 
 For one-shot input, call `Process` without changing `Input`:
 
 ```csharp
-if (processor.IsReady && processor.Process(sourceTexture))
+if (generator.IsReady && generator.Process(sourceTexture))
     Debug.Log("Frame accepted");
 ```
 
