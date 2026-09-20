@@ -33,6 +33,7 @@ public sealed partial class RVMDemoController
     }
 
     const float CameraStartTimeout = 5;
+    const string SelectedSourcePreferenceKey = "RVM.SelectedInputSource";
 
     List<InputSource> _sources;
     VideoPlayer _videoPlayer;
@@ -57,7 +58,11 @@ public sealed partial class RVMDemoController
         if (_sources != null) return;
 
         _sources = EnumerateSources();
-        _selectedSourceIndex = _sources.Count == 0 ? -1 : 0;
+        var selectedSource = PlayerPrefs.GetString(SelectedSourcePreferenceKey);
+        _selectedSourceIndex = _sources.FindIndex(
+            source => source.DisplayName == selectedSource
+        );
+        if (_selectedSourceIndex < 0 && _sources.Count > 0) _selectedSourceIndex = 0;
     }
 
     static List<InputSource> EnumerateSources()
@@ -128,6 +133,8 @@ public sealed partial class RVMDemoController
 
     void OnSourceDropdownChanged(ChangeEvent<string> change)
     {
+        PlayerPrefs.SetString(SelectedSourcePreferenceKey, change.newValue);
+        PlayerPrefs.Save();
         SelectSource(_sourceDropdown.index);
     }
 

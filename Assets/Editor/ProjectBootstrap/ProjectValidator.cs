@@ -167,7 +167,7 @@ public static class ProjectValidator
             throw new InvalidOperationException("The MP4 catalog contains an invalid relative path.");
 
         EditorSceneManager.OpenScene("Assets/Main.unity", OpenSceneMode.Single);
-        var controller = UnityEngine.Object.FindFirstObjectByType<RVMDemoController>();
+        var controller = UnityEngine.Object.FindAnyObjectByType<RVMDemoController>();
         if (controller == null || controller.GetComponent<VideoPlayer>() == null)
             throw new InvalidOperationException("Main scene has no configured VideoPlayer.");
     }
