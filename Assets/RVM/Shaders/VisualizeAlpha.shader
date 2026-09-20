@@ -1,8 +1,10 @@
-Shader "Hidden/RVM/VisualizeAlpha"
+Shader "Hidden/RVM/Output"
 {
     Properties
     {
         _MainTex("Alpha", 2D) = "black" {}
+        _ColorTex("Color", 2D) = "black" {}
+        _OutputHasAlpha("Output Has Alpha", Float) = 0
     }
 
 HLSLINCLUDE
@@ -10,6 +12,8 @@ HLSLINCLUDE
 #include "UnityCG.cginc"
 
 sampler2D _MainTex;
+sampler2D _ColorTex;
+float _OutputHasAlpha;
 
 void VertBlit(float4 position : POSITION,
               float2 texCoord : TEXCOORD0,
@@ -20,12 +24,14 @@ void VertBlit(float4 position : POSITION,
     outTexCoord = texCoord;
 }
 
-float4 FragVisualize(float4 position : SV_Position,
-                     float2 texCoord : TEXCOORD0) : SV_Target
+float4 FragOutput(float4 position : SV_Position,
+                  float2 texCoord : TEXCOORD0) : SV_Target
 {
     texCoord.y = 1 - texCoord.y;
     float alpha = tex2D(_MainTex, texCoord).r;
-    return float4(alpha, alpha, alpha, 1);
+    if (_OutputHasAlpha > 0.5)
+        return float4(tex2D(_ColorTex, texCoord).rgb, alpha);
+    return alpha.xxxx;
 }
 
 ENDHLSL
@@ -39,10 +45,10 @@ ENDHLSL
 
         Pass
         {
-            Name "VisualizeAlphaPass"
+            Name "OutputPass"
             HLSLPROGRAM
             #pragma vertex VertBlit
-            #pragma fragment FragVisualize
+            #pragma fragment FragOutput
             ENDHLSL
         }
     }

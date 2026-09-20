@@ -168,13 +168,7 @@ public sealed partial class RVMDemoController
         StopCurrentSource();
         SetStatus($"Switching to {_sources[index].DisplayName}…");
 
-        // The readback callback owns its source pixels until completion. Waiting here
-        // prevents an old frame from being submitted after the recurrent reset.
-        while (_readbackPending) yield return null;
-        if (generation != _sourceGeneration) yield break;
-
-        yield return ResetInferenceState(generation);
-        if (generation != _sourceGeneration) yield break;
+        _processor.Reset();
         ClearDisplayTextures();
         _currentSourceIndex = index;
         _sourceError = null;
@@ -297,13 +291,11 @@ public sealed partial class RVMDemoController
     {
         _videoPlayer.Pause();
         _videoFrameReady = false;
-        while (_readbackPending) yield return null;
-        if (generation != _sourceGeneration) yield break;
-
-        yield return ResetInferenceState(generation);
-        if (generation != _sourceGeneration) yield break;
+        _processor.Reset();
         ClearDisplayTextures();
         _videoPlayer.frame = 0;
+        yield return null;
+        if (generation != _sourceGeneration) yield break;
         _videoPlayer.Play();
         _loopCoroutine = null;
     }
@@ -353,15 +345,11 @@ public sealed partial class RVMDemoController
 
     bool TryGetSourceFrame(
         out Texture texture,
-        out int width,
-        out int height,
         out int rotation,
         out bool mirrorY
     )
     {
         texture = null;
-        width = 0;
-        height = 0;
         rotation = 0;
         mirrorY = false;
         if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count) return false;
@@ -372,8 +360,6 @@ public sealed partial class RVMDemoController
                 _webcam.width <= 16 || _webcam.height <= 16)
                 return false;
             texture = _webcam;
-            width = _webcam.width;
-            height = _webcam.height;
             rotation = _webcam.videoRotationAngle;
             mirrorY = _webcam.videoVerticallyMirrored;
         }
@@ -382,30 +368,11 @@ public sealed partial class RVMDemoController
             texture = _videoPlayer.texture;
             if (!_videoFrameReady || texture == null || texture.width <= 0 || texture.height <= 0)
                 return false;
-            width = texture.width;
-            height = texture.height;
             _videoFrameReady = false;
         }
 
         _cameraImage?.MarkDirtyRepaint();
         return true;
-    }
-
-    IEnumerator ResetInferenceState(int generation)
-    {
-        if (_plugin == IntPtr.Zero) yield break;
-
-        // Resetting recurrent state also invalidates native slot generations, so
-        // wait until Unity has stopped sampling every external alpha texture.
-        while (_alphaLeases.Count > 0)
-        {
-            ReleaseCompletedAlphaSlots();
-            if (_alphaLeases.Count == 0) break;
-            yield return null;
-            if (generation != _sourceGeneration) yield break;
-        }
-        ReleaseAllAlphaSlots();
-        RVMNative.RVMResetState(_plugin);
     }
 
     void SetSourceError(string message)
@@ -417,20 +384,21 @@ public sealed partial class RVMDemoController
     void UpdateInputImage()
     {
         if (_cameraImage == null) return;
-        var preprocessed = _inputTexture != null;
+        var input = _processor?.ModelInput;
+        var preprocessed = input != null;
         Texture source = null;
         if (_currentSourceIndex >= 0 && _currentSourceIndex < _sources.Count)
             source = _sources[_currentSourceIndex].Kind == InputSourceKind.Camera ?
                 _webcam : _videoPlayer.texture;
-        _cameraImage.image = preprocessed ? _inputTexture : source;
+        _cameraImage.image = preprocessed ? input : source;
         _cameraImage.uv = preprocessed ? new Rect(0, 1, 1, -1) : new Rect(0, 0, 1, 1);
         _cameraImage.MarkDirtyRepaint();
     }
 
     void ClearDisplayTextures()
     {
-        ClearTexture(_inputTexture);
-        ClearTexture(_alphaDisplayTexture);
+        ClearTexture(_processor?.ModelInput);
+        ClearTexture(_processor?.Output);
         _cameraImage?.MarkDirtyRepaint();
         _alphaImage?.MarkDirtyRepaint();
     }

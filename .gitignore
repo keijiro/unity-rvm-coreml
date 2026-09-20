@@ -21,6 +21,7 @@ Desktop.ini
 /*.apk
 /*.tgz
 /*_DoNotShip
+/*_ButDontShipItWithYourGame
 
 # Skills
 /skills-lock.json
