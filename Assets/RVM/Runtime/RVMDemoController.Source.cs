@@ -45,6 +45,7 @@ public sealed partial class RVMDemoController
     List<InputSource> _sources;
     VideoPlayer _videoPlayer;
     WebCamTexture _webcam;
+    RenderTexture _orientedInput;
     Coroutine _switchCoroutine;
     Coroutine _loopCoroutine;
     DropdownField _sourceDropdown;
@@ -313,6 +314,7 @@ public sealed partial class RVMDemoController
             Destroy(_webcam);
             _webcam = null;
         }
+        ReleaseOrientedInput();
 
         DetachVideoEvents();
         if (_videoPlayer != null) _videoPlayer.Stop();
@@ -343,10 +345,9 @@ public sealed partial class RVMDemoController
     bool IsCurrentVideoEvent(VideoPlayer player, int generation) =>
         generation == _sourceGeneration && player == _videoPlayer;
 
-    bool TryGetSourceFrame(out Texture texture, out bool mirrorY)
+    bool TryGetSourceFrame(out Texture texture)
     {
         texture = null;
-        mirrorY = false;
         if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count) return false;
 
         if (_sources[_currentSourceIndex].Kind == InputSourceKind.Camera)
@@ -354,8 +355,8 @@ public sealed partial class RVMDemoController
             if (_webcam == null || !_webcam.isPlaying || !_webcam.didUpdateThisFrame ||
                 _webcam.width <= 16 || _webcam.height <= 16)
                 return false;
-            texture = _webcam;
-            mirrorY = _webcam.videoVerticallyMirrored;
+            texture = _webcam.videoVerticallyMirrored ?
+                GetOrientedInput(_webcam) : _webcam;
         }
         else
         {
@@ -367,6 +368,39 @@ public sealed partial class RVMDemoController
 
         _cameraImage?.MarkDirtyRepaint();
         return true;
+    }
+
+    Texture GetOrientedInput(Texture source)
+    {
+        if (_orientedInput == null || _orientedInput.width != source.width ||
+            _orientedInput.height != source.height)
+        {
+            ReleaseOrientedInput();
+            _orientedInput = new RenderTexture(
+                source.width,
+                source.height,
+                0,
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.sRGB
+            )
+            {
+                name = "RVM Oriented Camera Input",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            _orientedInput.Create();
+        }
+
+        Graphics.Blit(source, _orientedInput, new Vector2(1, -1), new Vector2(0, 1));
+        return _orientedInput;
+    }
+
+    void ReleaseOrientedInput()
+    {
+        if (_orientedInput == null) return;
+        _orientedInput.Release();
+        Destroy(_orientedInput);
+        _orientedInput = null;
     }
 
     void SetSourceError(string message)

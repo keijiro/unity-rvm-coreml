@@ -13,7 +13,6 @@ HLSLINCLUDE
 sampler2D _MainTex;
 float4 _MainTex_TexelSize;
 float4 _SourceSize;
-float _MirrorY;
 float _TargetAspect;
 
 void VertBlit(float4 position : POSITION,
@@ -34,7 +33,6 @@ float4 FragPreprocess(float4 position : SV_Position,
                        float2(_TargetAspect / aspect, 1) :
                        float2(1, aspect / _TargetAspect);
     float2 uv = (texCoord - 0.5) * cropScale + 0.5;
-    if (_MirrorY > 0.5) uv.y = 1 - uv.y;
 #if UNITY_UV_STARTS_AT_TOP
     if (_MainTex_TexelSize.y < 0) uv.y = 1 - uv.y;
 #endif

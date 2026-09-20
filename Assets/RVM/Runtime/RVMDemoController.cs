@@ -33,11 +33,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
 
     void Update()
     {
-        if (TryGetSourceFrame(out var texture, out var mirrorY))
-        {
-            _generator.InputMirrorY = mirrorY;
+        if (TryGetSourceFrame(out var texture))
             _generator.Process(texture);
-        }
 
         UpdateInputImage();
         _alphaImage?.MarkDirtyRepaint();

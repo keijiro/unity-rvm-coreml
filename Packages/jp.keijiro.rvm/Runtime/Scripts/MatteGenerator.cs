@@ -21,9 +21,6 @@ public sealed partial class MatteGenerator : MonoBehaviour
     [field:SerializeField]
     public ComputeUnits ComputeUnits { get; set; } = ComputeUnits.All;
 
-    [field:SerializeField]
-    public bool InputMirrorY { get; set; }
-
     public bool IsReady =>
         _plugin != IntPtr.Zero && _inputTexture != null && _alphaTextures != null;
 

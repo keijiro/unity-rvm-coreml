@@ -273,7 +273,6 @@ MonoBehaviour:
   <Input>k__BackingField: {fileID: 0}
   <Output>k__BackingField: {fileID: 8400000, guid: d9aa3749147b54f948dfa2b3859b2ea7, type: 2}
   <ComputeUnits>k__BackingField: 2
-  <InputMirrorY>k__BackingField: 0
   _preprocessShader: {fileID: 4800000, guid: a893605a8835f42bcb03057f06bf6899, type: 3}
   _outputShader: {fileID: 4800000, guid: b02889cedf2547b1b7d9d35fb554cf47, type: 3}
 --- !u!1 &1411473415

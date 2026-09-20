@@ -8,7 +8,8 @@ fixed-shape 1280 x 720 MobileNetV3 model required by the generator.
 
 Add `MatteGenerator` to a GameObject and assign a texture to `Input`. The processed
 result is written to `Output`; when no output is assigned, the component creates
-and owns a 1280 x 720 render texture.
+and owns a 1280 x 720 render texture. Input orientation is the caller's
+responsibility; vertically mirrored sources must be corrected before submission.
 
 `MatteGenerator` processes `Input` automatically while the component is active.
 Alternatively, call `Process` to submit a texture explicitly. Submission is
@@ -39,7 +40,7 @@ serial inference queue, and IOSurface-backed alpha buffers.
 
 ### Frame data flow
 
-1. `Preprocess.shader` center-crops, mirrors, and scales the source into a
+1. `Preprocess.shader` center-crops and scales the source into a
    fixed 1280 x 720 `RenderTexture`. This normalized image is retained as the RGB
    source for the final result.
 2. `AsyncGPUReadback` returns that texture as BGRA bytes. The C# layer passes a

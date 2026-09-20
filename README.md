@@ -19,7 +19,8 @@ the demo. `ComputeUnits` selects `CpuOnly`, `CpuAndGpu`, `All`, or
 
 Assign a `Texture` to `Input` in the Inspector or from C# for continuous processing.
 The generator center-crops each available frame to the model's 1280 × 720 aspect
-ratio. Camera integrations can also set `InputMirrorY`.
+ratio. Inputs must be oriented correctly before submission; camera integrations are
+responsible for handling vertically mirrored frames.
 
 For one-shot input, call `Process` without changing `Input`:
 
