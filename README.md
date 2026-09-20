@@ -43,11 +43,11 @@ Call `Reset()` when changing sources or looping a video to discard pending frame
 clear recurrent state. `InferenceTime` reports the most recently completed Core ML
 inference in milliseconds; `IsReady` and `LastError` expose load and error state.
 
-To perform the import, shader, UI, model-signature, recurrent-inference, and native slot validation from the command line:
+To run the import, shader, UI, model-signature, recurrent-inference, and native slot tests from the command line:
 
 ```sh
-unity run . --editor-version 6000.6.1f1 --timeout 300 -- \
-  -executeMethod ProjectBootstrap.ProjectValidator.Validate
+unity test . --editor-version 6000.6.1f1 --mode EditMode \
+  --output Logs/test-results.xml --timeout 300
 ```
 
 ## Model and attribution

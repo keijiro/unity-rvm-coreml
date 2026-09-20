@@ -1,0 +1,14 @@
+{
+  "name": "RVM.EditorTests",
+  "rootNamespace": "RVM.Tests.Editor",
+  "references": [
+    "RVM.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
