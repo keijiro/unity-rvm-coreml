@@ -23,11 +23,12 @@ public sealed class ProjectConfigurationTests
     const string MainUIPath = "Assets/UI/Main.uxml";
     const string PanelSettingsPath = "Assets/UI/DefaultSettings.asset";
     const string OutputTexturePath = "Assets/RVM/Runtime/RVMMatte.renderTexture";
-    const string PreprocessShaderPath = "Assets/RVM/Shaders/Preprocess.shader";
-    const string OutputShaderPath = "Assets/RVM/Shaders/VisualizeAlpha.shader";
-    const string PluginPath = "Assets/Plugins/macOS/RVMPlugin.bundle";
-    const string ModelRelativePath =
-        "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+    const string PackagePath = "Packages/jp.keijiro.rvm";
+    const string PreprocessShaderPath = PackagePath + "/Runtime/Shaders/Preprocess.shader";
+    const string OutputShaderPath = PackagePath + "/Runtime/Shaders/VisualizeAlpha.shader";
+    const string PluginPath = PackagePath + "/Runtime/Plugins/macOS/RVMPlugin.bundle";
+    const string ModelPath = PackagePath +
+        "/Runtime/Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
     const string ModelSha256 =
         "68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794";
     const int InputWidth = 1280;
@@ -158,7 +159,7 @@ public sealed class ProjectConfigurationTests
     [Test]
     public void ModelMatchesExpectedDigest()
     {
-        var path = Path.Combine(Application.streamingAssetsPath, ModelRelativePath);
+        var path = Path.GetFullPath(ModelPath);
         Assert.That(File.Exists(path), Is.True, $"The RVM model is missing: {path}");
 
         using var stream = File.OpenRead(path);

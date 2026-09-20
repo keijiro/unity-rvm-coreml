@@ -2,7 +2,8 @@
 
 ## Robust Video Matting
 
-This project includes the official `rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel` model from:
+This package includes the official
+`rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel` model from:
 
 - Project: Robust Video Matting
 - Authors: Shanchuan Lin, Linjie Yang, Imran Saleemi, and Soumyadip Sengupta

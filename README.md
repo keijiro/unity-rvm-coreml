@@ -54,4 +54,4 @@ unity test . --editor-version 6000.6.1f1 --mode EditMode \
 
 The bundled model is `rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel` from [PeterL1n/RobustVideoMatting](https://github.com/PeterL1n/RobustVideoMatting), release `v1.0.0`. It uses MobileNetV3, a fixed 1280 × 720 input, downsample ratio 0.375, and INT8-quantized weights. Its SHA-256 is `68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794`.
 
-RVM is described in *Robust High-Resolution Video Matting with Temporal Guidance* (Lin et al., WACV 2022). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for upstream licensing information.
+RVM is described in *Robust High-Resolution Video Matting with Temporal Guidance* (Lin et al., WACV 2022). See [THIRD_PARTY_NOTICES.md](Packages/jp.keijiro.rvm/THIRD_PARTY_NOTICES.md) for upstream licensing information.

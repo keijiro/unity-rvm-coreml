@@ -14,8 +14,8 @@ namespace RVM.Tests.Editor
 public sealed class NativePluginIntegrationTests
 {
     const string LibraryName = "RVMPlugin";
-    const string ModelRelativePath =
-        "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+    const string ModelPath = "Packages/jp.keijiro.rvm/Runtime/Models/" +
+        "rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
     const int ErrorCapacity = 1024;
     const int InputWidth = 1280;
     const int InputHeight = 720;
@@ -100,10 +100,7 @@ public sealed class NativePluginIntegrationTests
     [OneTimeSetUp]
     public void CreatePlugin()
     {
-        var modelPath = Path.Combine(
-            UnityEngine.Application.streamingAssetsPath,
-            ModelRelativePath
-        );
+        var modelPath = Path.GetFullPath(ModelPath);
         var error = new StringBuilder(ErrorCapacity);
         _handle = RVMCreateWithComputeUnits(
             modelPath,

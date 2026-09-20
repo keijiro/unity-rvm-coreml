@@ -15,8 +15,12 @@ public sealed class RVMProcessor : MonoBehaviour
     const int ModelInputWidth = 1280;
     const int ModelInputHeight = 720;
     const int AlphaSlotCount = 3;
-    const string ModelRelativePath =
+    const string ModelStreamingAssetsPath =
         "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+#if UNITY_EDITOR
+    const string ModelPackagePath =
+        "Runtime/Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+#endif
 
     // Public properties
 
@@ -148,7 +152,7 @@ public sealed class RVMProcessor : MonoBehaviour
         CreateMaterials();
         if (_preprocessMaterial == null || _outputMaterial == null) return;
 
-        var modelPath = Path.Combine(Application.streamingAssetsPath, ModelRelativePath);
+        var modelPath = GetModelPath();
         var computeUnits = ComputeUnits;
         RVMNative.EnsureLoaded();
         _creationTask = Task.Run(() => RVMNative.Create(modelPath, computeUnits));
@@ -212,6 +216,18 @@ public sealed class RVMProcessor : MonoBehaviour
     }
 
     // Initialization
+
+    static string GetModelPath()
+    {
+#if UNITY_EDITOR
+        var package = UnityEditor.PackageManager.PackageInfo.FindForAssembly(
+            typeof(RVMProcessor).Assembly
+        );
+        return Path.Combine(package.resolvedPath, ModelPackagePath);
+#else
+        return Path.Combine(Application.streamingAssetsPath, ModelStreamingAssetsPath);
+#endif
+    }
 
     void CreateMaterials()
     {

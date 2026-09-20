@@ -1,0 +1,7 @@
+{
+  "name": "RVM.Editor",
+  "rootNamespace": "RVM.Editor",
+  "includePlatforms": [
+    "Editor"
+  ]
+}
