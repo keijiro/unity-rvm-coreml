@@ -111,14 +111,11 @@ public sealed partial class RVMDemoController : MonoBehaviour
     void RefreshStatus()
     {
         if (_statusLabel == null) return;
-        if (!string.IsNullOrEmpty(_generator?.LastError))
-        {
-            _statusLabel.text = _generator.LastError;
-            return;
-        }
-
-        _statusLabel.text = _generator != null && _generator.InferenceTime > 0 ?
-            $"{_generator.InferenceTime:F1} ms · {_statusMessage}" : _statusMessage;
+        var error = _generator?.LastError;
+        _statusLabel.tooltip = string.IsNullOrEmpty(error) ? _statusMessage : error;
+        _statusLabel.text = string.IsNullOrEmpty(error) &&
+            _generator != null && _generator.InferenceTime > 0 ?
+            $"{_generator.InferenceTime:F1} ms" : "—";
     }
 }
 

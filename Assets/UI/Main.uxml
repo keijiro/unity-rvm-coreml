@@ -3,19 +3,21 @@
     <ui:VisualElement name="root" class="screen">
         <ui:VisualElement class="header">
             <ui:VisualElement class="source-group">
-                <ui:Label text="Input" class="header-label" />
                 <ui:VisualElement class="source-control">
                     <ui:DropdownField name="sourceDropdown" class="source-dropdown" />
                     <ui:Label text="▾" picking-mode="Ignore" class="source-dropdown-icon" />
                 </ui:VisualElement>
             </ui:VisualElement>
             <ui:VisualElement class="sync-group">
-                <ui:Label text="Presentation" class="header-label" />
                 <ui:Toggle name="matteTriggeredSyncToggle" label="Matte-Triggered Sync" class="sync-toggle" />
             </ui:VisualElement>
             <ui:VisualElement class="status-group">
-                <ui:Label text="Inference time" class="header-label" />
-                <ui:Label name="statusLabel" class="status" />
+                <ui:Label text="Inference time" class="inference-label" />
+                <ui:VisualElement class="status-value">
+                    <!-- Reserve the formatted reading's width using the current font. -->
+                    <ui:Label text="0000.0 ms" picking-mode="Ignore" class="status status-size" />
+                    <ui:Label name="statusLabel" class="status status-reading" />
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="viewports">
