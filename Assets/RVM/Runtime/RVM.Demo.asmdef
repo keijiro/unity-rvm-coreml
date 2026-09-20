@@ -1,7 +1,0 @@
-{
-  "name": "RVM.Demo",
-  "rootNamespace": "RVM",
-  "references": [
-    "RVM.Runtime"
-  ]
-}

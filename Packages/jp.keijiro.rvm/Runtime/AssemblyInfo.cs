@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("RVM.Demo")]
+[assembly: InternalsVisibleTo("Rvm.Demo")]

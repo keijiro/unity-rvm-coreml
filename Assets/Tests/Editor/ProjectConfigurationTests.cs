@@ -14,7 +14,7 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 using UnityEngine.Video;
 
-namespace RVM.Tests.Editor
+namespace Rvm.Tests.Editor
 {
 
 public sealed class ProjectConfigurationTests
@@ -75,22 +75,63 @@ public sealed class ProjectConfigurationTests
     public void MainSceneHasCompleteDemoController()
     {
         var controller = OpenDemoController();
+        var source = GetControllerReference<RvmInputSource>(
+            controller,
+            "_source"
+        );
+        var presentation = GetControllerReference<RvmPresentationPipeline>(
+            controller,
+            "_presentation"
+        );
+        var display = GetControllerReference<RvmOutputDisplay>(
+            controller,
+            "_display"
+        );
+        var view = GetControllerReference<RvmDemoView>(controller, "_view");
+
         Assert.That(controller.isActiveAndEnabled, Is.True);
-        Assert.That(controller.GetComponent<PanelRenderer>(), Is.Not.Null);
-        Assert.That(controller.GetComponent<VideoPlayer>(), Is.Not.Null);
-        Assert.That(controller.GetComponent<MatteGenerator>(), Is.Not.Null);
-        Assert.That(controller.GetComponent<MatteGenerator>().enabled, Is.True);
+        Assert.That(controller.name, Is.EqualTo("RVM Demo"));
+        Assert.That(controller.GetComponents<Component>(), Has.Length.EqualTo(2));
+        Assert.That(controller.transform.childCount, Is.EqualTo(4));
+
+        Assert.That(source.name, Is.EqualTo("Input"));
+        Assert.That(source.transform.parent, Is.EqualTo(controller.transform));
+        Assert.That(source.GetComponent<VideoPlayer>(), Is.Not.Null);
+
+        Assert.That(presentation.name, Is.EqualTo("Inference"));
+        Assert.That(presentation.transform.parent, Is.EqualTo(controller.transform));
+        Assert.That(presentation.GetComponent<MatteGenerator>(), Is.Not.Null);
+        Assert.That(presentation.GetComponent<MatteGenerator>().enabled, Is.True);
+
+        Assert.That(display.name, Is.EqualTo("Output"));
+        Assert.That(display.transform.parent, Is.EqualTo(controller.transform));
+
+        Assert.That(view.name, Is.EqualTo("UI"));
+        Assert.That(view.transform.parent, Is.EqualTo(controller.transform));
+        Assert.That(view.GetComponent<PanelRenderer>(), Is.Not.Null);
     }
 
     [Test]
     public void DemoControllerReferencesExpectedAssets()
     {
         var controller = OpenDemoController();
-        var demo = new SerializedObject(controller);
-        var panel = new SerializedObject(controller.GetComponent<PanelRenderer>());
-        var generator = new SerializedObject(controller.GetComponent<MatteGenerator>());
+        var displayComponent = GetControllerReference<RvmOutputDisplay>(
+            controller,
+            "_display"
+        );
+        var presentation = GetControllerReference<RvmPresentationPipeline>(
+            controller,
+            "_presentation"
+        );
+        var view = GetControllerReference<RvmDemoView>(controller, "_view");
+        var display = new SerializedObject(displayComponent);
+        var panel = new SerializedObject(view.GetComponent<PanelRenderer>());
+        var generator = new SerializedObject(
+            presentation.GetComponent<MatteGenerator>()
+        );
 
-        AssertAssetReference(demo, "_compositeShader", CompositeShaderPath);
+        AssertAssetReference(display, "_compositeShader", CompositeShaderPath);
+        AssertAssetReference(display, "_preprocessShader", PreprocessShaderPath);
         AssertAssetReference(panel, "sourceAsset", MainUIPath);
         AssertAssetReference(panel, "m_PanelSettings", PanelSettingsPath);
         AssertAssetReference(generator, "_preprocessShader", PreprocessShaderPath);
@@ -100,7 +141,12 @@ public sealed class ProjectConfigurationTests
     [Test]
     public void DemoOutputMatchesDisplayContract()
     {
-        var output = OpenDemoController().GetComponent<MatteGenerator>().Output;
+        var controller = OpenDemoController();
+        var presentation = GetControllerReference<RvmPresentationPipeline>(
+            controller,
+            "_presentation"
+        );
+        var output = presentation.GetComponent<MatteGenerator>().Output;
         Assert.That(output, Is.Not.Null);
         Assert.That(AssetDatabase.GetAssetPath(output), Is.EqualTo(OutputTexturePath));
         Assert.That(output.width, Is.EqualTo(InputWidth));
@@ -174,11 +220,11 @@ public sealed class ProjectConfigurationTests
         Assert.That(hash, Is.EqualTo(ModelSha256));
     }
 
-    static RVMDemoController OpenDemoController()
+    static RvmDemoController OpenDemoController()
     {
         var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
         var controllers = scene.GetRootGameObjects()
-            .SelectMany(root => root.GetComponentsInChildren<RVMDemoController>(true))
+            .SelectMany(root => root.GetComponentsInChildren<RvmDemoController>(true))
             .ToArray();
         Assert.That(
             controllers,
@@ -193,6 +239,21 @@ public sealed class ProjectConfigurationTests
         var asset = AssetDatabase.LoadAssetAtPath<T>(path);
         Assert.That(asset, Is.Not.Null, $"{path} could not be loaded as {typeof(T).Name}.");
         return asset;
+    }
+
+    static T GetControllerReference<T>(
+        RvmDemoController controller,
+        string propertyName
+    ) where T : UnityEngine.Object
+    {
+        var property = new SerializedObject(controller).FindProperty(propertyName);
+        var reference = property?.objectReferenceValue as T;
+        Assert.That(
+            reference,
+            Is.Not.Null,
+            $"{nameof(RvmDemoController)}.{propertyName} is not assigned."
+        );
+        return reference;
     }
 
     static void AssertElement<T>(VisualElement root, string name) where T : VisualElement
@@ -217,4 +278,4 @@ public sealed class ProjectConfigurationTests
     }
 }
 
-} // namespace RVM.Tests.Editor
+} // namespace Rvm.Tests.Editor

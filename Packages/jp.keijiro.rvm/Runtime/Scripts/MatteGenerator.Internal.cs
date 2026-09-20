@@ -69,7 +69,7 @@ public sealed partial class MatteGenerator
     {
         if (!IsReady || _disposed || _resetRequested || _readbackPending ||
             _frameInFlight || input == null || input.width <= 0 || input.height <= 0 ||
-            NativePlugin.RVMCanSubmit(_plugin) == 0 || !EnsureOutput())
+            NativePlugin.RvmCanSubmit(_plugin) == 0 || !EnsureOutput())
             return false;
 
         _preprocessMaterial.SetVector(
@@ -170,7 +170,7 @@ public sealed partial class MatteGenerator
 
         if (_plugin != IntPtr.Zero)
         {
-            NativePlugin.RVMDestroy(_plugin);
+            NativePlugin.RvmDestroy(_plugin);
             _plugin = IntPtr.Zero;
         }
 
@@ -181,7 +181,7 @@ public sealed partial class MatteGenerator
         {
             if (completed.Status != TaskStatus.RanToCompletion) return;
             if (completed.Result.Handle != IntPtr.Zero)
-                NativePlugin.RVMDestroy(completed.Result.Handle);
+                NativePlugin.RvmDestroy(completed.Result.Handle);
         });
     }
 
@@ -224,7 +224,7 @@ public sealed partial class MatteGenerator
         _creationTask = null;
         if (_disposed)
         {
-            if (result.Handle != IntPtr.Zero) NativePlugin.RVMDestroy(result.Handle);
+            if (result.Handle != IntPtr.Zero) NativePlugin.RvmDestroy(result.Handle);
             return;
         }
         if (result.Handle == IntPtr.Zero)
@@ -234,12 +234,12 @@ public sealed partial class MatteGenerator
         }
 
         _plugin = result.Handle;
-        var width = NativePlugin.RVMGetInputWidth(_plugin);
-        var height = NativePlugin.RVMGetInputHeight(_plugin);
+        var width = NativePlugin.RvmGetInputWidth(_plugin);
+        var height = NativePlugin.RvmGetInputHeight(_plugin);
         if (width != ModelInputWidth || height != ModelInputHeight)
         {
             SetError($"Unexpected model input size: {width} × {height}.");
-            NativePlugin.RVMDestroy(_plugin);
+            NativePlugin.RvmDestroy(_plugin);
             _plugin = IntPtr.Zero;
             return;
         }
@@ -259,7 +259,7 @@ public sealed partial class MatteGenerator
         _inputTexture.Create();
         if (!CreateAlphaTextures())
         {
-            NativePlugin.RVMDestroy(_plugin);
+            NativePlugin.RvmDestroy(_plugin);
             _plugin = IntPtr.Zero;
         }
     }
@@ -289,7 +289,7 @@ public sealed partial class MatteGenerator
 
     bool CreateAlphaTextures()
     {
-        var count = NativePlugin.RVMGetAlphaSlotCount(_plugin);
+        var count = NativePlugin.RvmGetAlphaSlotCount(_plugin);
         if (count != AlphaSlotCount)
         {
             SetError($"Unexpected native alpha slot count: {count}.");
@@ -299,7 +299,7 @@ public sealed partial class MatteGenerator
         _alphaTextures = new Texture2D[count];
         for (var index = 0; index < count; index++)
         {
-            var result = NativePlugin.RVMGetAlphaTextureInfo(
+            var result = NativePlugin.RvmGetAlphaTextureInfo(
                 _plugin,
                 index,
                 out var width,
@@ -344,7 +344,7 @@ public sealed partial class MatteGenerator
 
         var source = request.GetData<byte>();
         var pointer = (IntPtr)NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(source);
-        var result = NativePlugin.RVMSubmitBGRA(
+        var result = NativePlugin.RvmSubmitBgra(
             _plugin,
             pointer,
             ModelInputWidth,
@@ -361,7 +361,7 @@ public sealed partial class MatteGenerator
         {
             // Allocation failures are published through the native result mailbox.
             // Keep polling so that error state is consumed instead of permanently
-            // blocking RVMCanSubmit with an unread failure.
+            // blocking RvmCanSubmit with an unread failure.
             SetError("Could not submit the input frame.");
             return;
         }
@@ -398,7 +398,7 @@ public sealed partial class MatteGenerator
             _frameInFlight = false;
             SetError("The native plugin returned mismatched alpha output metadata.");
             if (slotIndex >= 0)
-                NativePlugin.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
+                NativePlugin.RvmReleaseAlphaSlot(_plugin, slotIndex, generation);
             return;
         }
 
@@ -407,7 +407,7 @@ public sealed partial class MatteGenerator
         {
             _frameInFlight = false;
             SetError("The output RenderTexture is no longer valid.");
-            NativePlugin.RVMReleaseAlphaSlot(_plugin, slotIndex, generation);
+            NativePlugin.RvmReleaseAlphaSlot(_plugin, slotIndex, generation);
             return;
         }
 
@@ -430,7 +430,7 @@ public sealed partial class MatteGenerator
             SynchronisationStageFlags.AllGPUOperations
         );
         _alphaLeases.Add(new AlphaLease(slotIndex, generation, fence));
-        if (NativePlugin.RVMMarkAlphaSlotGPUInFlight(
+        if (NativePlugin.RvmMarkAlphaSlotGpuInFlight(
                 _plugin,
                 slotIndex,
                 generation
@@ -451,7 +451,7 @@ public sealed partial class MatteGenerator
         if (_alphaLeases.Count > 0) return;
 
         ReleaseAllAlphaSlots();
-        NativePlugin.RVMResetState(_plugin);
+        NativePlugin.RvmResetState(_plugin);
         _submittedOutput = null;
         _frameInFlight = false;
         _expectedFrameNumber = 1;
@@ -470,7 +470,7 @@ public sealed partial class MatteGenerator
         {
             var lease = _alphaLeases[index];
             if (!lease.Fence.passed) continue;
-            NativePlugin.RVMReleaseAlphaSlot(
+            NativePlugin.RvmReleaseAlphaSlot(
                 _plugin,
                 lease.SlotIndex,
                 lease.Generation
@@ -483,7 +483,7 @@ public sealed partial class MatteGenerator
     {
         foreach (var lease in _alphaLeases)
         {
-            NativePlugin.RVMReleaseAlphaSlot(
+            NativePlugin.RvmReleaseAlphaSlot(
                 _plugin,
                 lease.SlotIndex,
                 lease.Generation

@@ -1,6 +1,6 @@
 using System;
 
-namespace RVM
+namespace Rvm
 {
 
 internal sealed class PresentationScheduler
@@ -86,4 +86,4 @@ internal sealed class PresentationScheduler
     }
 }
 
-} // namespace RVM
+} // namespace Rvm

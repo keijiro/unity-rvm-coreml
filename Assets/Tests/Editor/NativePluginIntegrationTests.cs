@@ -7,7 +7,7 @@ using System.Threading;
 using NUnit.Framework;
 using Rvm;
 
-namespace RVM.Tests.Editor
+namespace Rvm.Tests.Editor
 {
 
 [Category("NativeIntegration")]
@@ -27,31 +27,59 @@ public sealed class NativePluginIntegrationTests
     // These declarations intentionally duplicate the runtime ABI. Tests must
     // exercise the plugin directly so wrapper changes cannot hide an ABI regression.
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern IntPtr RVMCreateWithComputeUnits(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMCreateWithComputeUnits",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern IntPtr RvmCreateWithComputeUnits(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string modelPath,
         ComputeUnits computeUnits,
         StringBuilder errorBuffer,
         int errorCapacity
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern void RVMDestroy(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMDestroy",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern void RvmDestroy(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern void RVMResetState(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMResetState",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern void RvmResetState(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMGetInputWidth(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetInputWidth",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmGetInputWidth(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMGetInputHeight(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetInputHeight",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmGetInputHeight(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMGetAlphaSlotCount(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetAlphaSlotCount",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmGetAlphaSlotCount(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMGetAlphaTextureInfo(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetAlphaTextureInfo",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmGetAlphaTextureInfo(
         IntPtr handle,
         int slotIndex,
         out int width,
@@ -59,11 +87,19 @@ public sealed class NativePluginIntegrationTests
         out IntPtr nativeTexture
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMCanSubmit(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMCanSubmit",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmCanSubmit(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMSubmitBGRA(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMSubmitBGRA",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmSubmitBgra(
         IntPtr handle,
         IntPtr bgra,
         int width,
@@ -71,8 +107,12 @@ public sealed class NativePluginIntegrationTests
         int rowBytes
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMTryGetOutputInfoEx(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMTryGetOutputInfoEx",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmTryGetOutputInfoEx(
         IntPtr handle,
         out int width,
         out int height,
@@ -84,15 +124,23 @@ public sealed class NativePluginIntegrationTests
         int errorCapacity
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMMarkAlphaSlotGPUInFlight(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMMarkAlphaSlotGPUInFlight",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmMarkAlphaSlotGpuInFlight(
         IntPtr handle,
         int slotIndex,
         ulong generation
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMReleaseAlphaSlot(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMReleaseAlphaSlot",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmReleaseAlphaSlot(
         IntPtr handle,
         int slotIndex,
         ulong generation
@@ -103,7 +151,7 @@ public sealed class NativePluginIntegrationTests
     {
         var modelPath = Path.GetFullPath(ModelPath);
         var error = new StringBuilder(ErrorCapacity);
-        _handle = RVMCreateWithComputeUnits(
+        _handle = RvmCreateWithComputeUnits(
             modelPath,
             ComputeUnits.All,
             error,
@@ -115,33 +163,33 @@ public sealed class NativePluginIntegrationTests
     [SetUp]
     public void ResetPlugin()
     {
-        RVMResetState(_handle);
-        Assert.That(RVMCanSubmit(_handle), Is.EqualTo(1));
+        RvmResetState(_handle);
+        Assert.That(RvmCanSubmit(_handle), Is.EqualTo(1));
     }
 
     [OneTimeTearDown]
     public void DestroyPlugin()
     {
         if (_handle == IntPtr.Zero) return;
-        RVMDestroy(_handle);
+        RvmDestroy(_handle);
         _handle = IntPtr.Zero;
     }
 
     [Test]
     public void ModelReportsExpectedInputDimensions()
     {
-        Assert.That(RVMGetInputWidth(_handle), Is.EqualTo(InputWidth));
-        Assert.That(RVMGetInputHeight(_handle), Is.EqualTo(InputHeight));
+        Assert.That(RvmGetInputWidth(_handle), Is.EqualTo(InputWidth));
+        Assert.That(RvmGetInputHeight(_handle), Is.EqualTo(InputHeight));
     }
 
     [Test]
     public void AlphaSlotsHaveExpectedLayout()
     {
-        var count = RVMGetAlphaSlotCount(_handle);
+        var count = RvmGetAlphaSlotCount(_handle);
         Assert.That(count, Is.EqualTo(AlphaSlotCount));
         for (var index = 0; index < count; index++)
         {
-            var result = RVMGetAlphaTextureInfo(
+            var result = RvmGetAlphaTextureInfo(
                 _handle,
                 index,
                 out var width,
@@ -175,24 +223,24 @@ public sealed class NativePluginIntegrationTests
             Assert.That(width, Is.EqualTo(InputWidth));
             Assert.That(height, Is.EqualTo(InputHeight));
             Assert.That(frameNumber, Is.EqualTo((ulong)frame));
-            Assert.That(RVMCanSubmit(_handle), Is.EqualTo(0));
+            Assert.That(RvmCanSubmit(_handle), Is.EqualTo(0));
             Assert.That(
-                RVMReleaseAlphaSlot(_handle, slotIndex, generation + 1),
+                RvmReleaseAlphaSlot(_handle, slotIndex, generation + 1),
                 Is.EqualTo(-1),
                 "A mismatched generation was accepted."
             );
 
             Assert.That(
-                RVMMarkAlphaSlotGPUInFlight(_handle, slotIndex, generation),
+                RvmMarkAlphaSlotGpuInFlight(_handle, slotIndex, generation),
                 Is.EqualTo(1)
             );
-            Assert.That(RVMReleaseAlphaSlot(_handle, slotIndex, generation), Is.EqualTo(1));
+            Assert.That(RvmReleaseAlphaSlot(_handle, slotIndex, generation), Is.EqualTo(1));
             Assert.That(
-                RVMReleaseAlphaSlot(_handle, slotIndex, generation),
+                RvmReleaseAlphaSlot(_handle, slotIndex, generation),
                 Is.EqualTo(0),
                 "A double release was accepted."
             );
-            Assert.That(RVMCanSubmit(_handle), Is.EqualTo(1));
+            Assert.That(RvmCanSubmit(_handle), Is.EqualTo(1));
         }
     }
 
@@ -205,9 +253,9 @@ public sealed class NativePluginIntegrationTests
 
         // Reset must wait for this in-flight prediction, discard its unpublished
         // mailbox result, and make the leased inference slot reusable.
-        RVMResetState(_handle);
+        RvmResetState(_handle);
         var error = new StringBuilder(ErrorCapacity);
-        var result = RVMTryGetOutputInfoEx(
+        var result = RvmTryGetOutputInfoEx(
             _handle,
             out _,
             out _,
@@ -219,7 +267,7 @@ public sealed class NativePluginIntegrationTests
             error.Capacity
         );
         Assert.That(result, Is.EqualTo(0), "Reset left an old output available.");
-        Assert.That(RVMCanSubmit(_handle), Is.EqualTo(1));
+        Assert.That(RvmCanSubmit(_handle), Is.EqualTo(1));
 
         FillSyntheticFrame(pixels, 4);
         SubmitFrame(pixels);
@@ -233,13 +281,13 @@ public sealed class NativePluginIntegrationTests
         );
         Assert.That(frameNumber, Is.EqualTo(1));
         Assert.That(
-            RVMMarkAlphaSlotGPUInFlight(_handle, slotIndex, generation),
+            RvmMarkAlphaSlotGpuInFlight(_handle, slotIndex, generation),
             Is.EqualTo(1)
         );
-        Assert.That(RVMReleaseAlphaSlot(_handle, slotIndex, generation), Is.EqualTo(1));
+        Assert.That(RvmReleaseAlphaSlot(_handle, slotIndex, generation), Is.EqualTo(1));
 
-        RVMResetState(_handle);
-        Assert.That(RVMCanSubmit(_handle), Is.EqualTo(1));
+        RvmResetState(_handle);
+        Assert.That(RvmCanSubmit(_handle), Is.EqualTo(1));
     }
 
     void SubmitFrameAndAssertBackpressure(byte[] pixels)
@@ -248,7 +296,7 @@ public sealed class NativePluginIntegrationTests
         try
         {
             Assert.That(
-                RVMSubmitBGRA(
+                RvmSubmitBgra(
                     _handle,
                     pin.AddrOfPinnedObject(),
                     InputWidth,
@@ -257,9 +305,9 @@ public sealed class NativePluginIntegrationTests
                 ),
                 Is.EqualTo(1)
             );
-            Assert.That(RVMCanSubmit(_handle), Is.EqualTo(0));
+            Assert.That(RvmCanSubmit(_handle), Is.EqualTo(0));
             Assert.That(
-                RVMSubmitBGRA(
+                RvmSubmitBgra(
                     _handle,
                     pin.AddrOfPinnedObject(),
                     InputWidth,
@@ -282,7 +330,7 @@ public sealed class NativePluginIntegrationTests
         try
         {
             Assert.That(
-                RVMSubmitBGRA(
+                RvmSubmitBgra(
                     _handle,
                     pin.AddrOfPinnedObject(),
                     InputWidth,
@@ -312,7 +360,7 @@ public sealed class NativePluginIntegrationTests
         int result;
         do
         {
-            result = RVMTryGetOutputInfoEx(
+            result = RvmTryGetOutputInfoEx(
                 _handle,
                 out width,
                 out height,
@@ -345,4 +393,4 @@ public sealed class NativePluginIntegrationTests
     }
 }
 
-} // namespace RVM.Tests.Editor
+} // namespace Rvm.Tests.Editor

@@ -1,5 +1,5 @@
 {
-  "name": "RVM.Runtime",
+  "name": "Rvm.Runtime",
   "rootNamespace": "Rvm",
   "allowUnsafeCode": true
 }

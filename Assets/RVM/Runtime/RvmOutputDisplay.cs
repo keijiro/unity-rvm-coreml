@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace RVM
+namespace Rvm
 {
 
-public sealed partial class RVMDemoController
+public sealed class RvmOutputDisplay : MonoBehaviour
 {
     const int InputPass = 0;
     const int AlphaPass = 1;
@@ -22,8 +22,13 @@ public sealed partial class RVMDemoController
     RenderTexture _alphaDisplayTexture;
     RenderTexture _compositeTexture;
     bool _displayDirty;
+    bool _repaintRequested;
 
-    void InitializeOutputDisplay()
+    internal Texture InputTexture => _inputDisplayTexture;
+    internal Texture AlphaTexture => _alphaDisplayTexture;
+    internal Texture CompositeTexture => _compositeTexture;
+
+    internal void Initialize()
     {
         if (_compositeShader == null) return;
         _compositeMaterial = new Material(_compositeShader);
@@ -32,11 +37,13 @@ public sealed partial class RVMDemoController
             _preprocessMaterial = new Material(_preprocessShader);
     }
 
-    void UpdateOutputDisplay()
+    internal bool Tick()
     {
+        var repaint = _repaintRequested;
+        _repaintRequested = false;
         if (!_displayDirty || _compositeMaterial == null ||
             _presentedColorTexture == null || _presentedMatteTexture == null)
-            return;
+            return repaint;
 
         _displayDirty = false;
         _compositeMaterial.SetTexture("_ColorTex", _presentedColorTexture);
@@ -58,13 +65,50 @@ public sealed partial class RVMDemoController
             _compositeMaterial,
             CompositePass
         );
+        return true;
+    }
 
-        if (_cameraImage != null) _cameraImage.image = _inputDisplayTexture;
-        if (_alphaImage != null) _alphaImage.image = _alphaDisplayTexture;
-        if (_compositeImage != null) _compositeImage.image = _compositeTexture;
-        _cameraImage?.MarkDirtyRepaint();
-        _alphaImage?.MarkDirtyRepaint();
-        _compositeImage?.MarkDirtyRepaint();
+    internal void PresentColor(Texture source, int width, int height)
+    {
+        if (_preprocessMaterial == null) return;
+
+        EnsureDisplayTextures(width, height);
+        _preprocessMaterial.SetVector(
+            "_SourceSize",
+            new Vector4(source.width, source.height, 0, 0)
+        );
+        _preprocessMaterial.SetFloat("_TargetAspect", (float)width / height);
+        Graphics.Blit(source, _presentedColorTexture, _preprocessMaterial);
+        _displayDirty = true;
+    }
+
+    internal void PresentMatte(Texture source, int width, int height)
+    {
+        EnsureDisplayTextures(width, height);
+        Graphics.Blit(source, _presentedMatteTexture);
+        _displayDirty = true;
+    }
+
+    internal void Clear()
+    {
+        ClearTexture(_presentedColorTexture);
+        ClearTexture(_presentedMatteTexture);
+        ClearTexture(_inputDisplayTexture);
+        ClearTexture(_alphaDisplayTexture);
+        ClearTexture(_compositeTexture);
+        _displayDirty = false;
+        _repaintRequested = true;
+    }
+
+    internal void Release()
+    {
+        ReleaseDisplayTextures();
+        Destroy(_compositeMaterial);
+        Destroy(_preprocessMaterial);
+        _compositeMaterial = null;
+        _preprocessMaterial = null;
+        _displayDirty = false;
+        _repaintRequested = false;
     }
 
     void EnsureDisplayTextures(int width, int height)
@@ -84,27 +128,6 @@ public sealed partial class RVMDemoController
         _compositeTexture = CreateDisplayTexture(width, height, "RVM Tinted Composite");
         ClearTexture(_presentedColorTexture);
         ClearTexture(_presentedMatteTexture);
-    }
-
-    void PresentColor(Texture source, int width, int height)
-    {
-        if (_preprocessMaterial == null) return;
-
-        EnsureDisplayTextures(width, height);
-        _preprocessMaterial.SetVector(
-            "_SourceSize",
-            new Vector4(source.width, source.height, 0, 0)
-        );
-        _preprocessMaterial.SetFloat("_TargetAspect", (float)width / height);
-        Graphics.Blit(source, _presentedColorTexture, _preprocessMaterial);
-        _displayDirty = true;
-    }
-
-    void PresentMatte(Texture source, int width, int height)
-    {
-        EnsureDisplayTextures(width, height);
-        Graphics.Blit(source, _presentedMatteTexture);
-        _displayDirty = true;
     }
 
     static bool MatchesSize(RenderTexture texture, int width, int height) =>
@@ -128,15 +151,6 @@ public sealed partial class RVMDemoController
         return texture;
     }
 
-    void ReleaseOutputDisplay()
-    {
-        ReleaseDisplayTextures();
-        Destroy(_compositeMaterial);
-        Destroy(_preprocessMaterial);
-        _compositeMaterial = null;
-        _preprocessMaterial = null;
-    }
-
     void ReleaseDisplayTextures()
     {
         ReleaseTexture(ref _presentedColorTexture);
@@ -153,6 +167,15 @@ public sealed partial class RVMDemoController
         Destroy(texture);
         texture = null;
     }
+
+    static void ClearTexture(RenderTexture texture)
+    {
+        if (texture == null) return;
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        GL.Clear(false, true, Color.clear);
+        RenderTexture.active = previous;
+    }
 }
 
-} // namespace RVM
+} // namespace Rvm

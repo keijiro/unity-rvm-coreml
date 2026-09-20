@@ -1,33 +1,40 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-namespace RVM
+namespace Rvm
 {
 
-public sealed partial class RVMDemoController
+[RequireComponent(typeof(MatteGenerator))]
+public sealed class RvmPresentationPipeline : MonoBehaviour
 {
     const int MaxQueuedFrameCount = 16;
     const long MaxQueuedFrameBytes = 64 * 1024 * 1024;
-    const float FallbackFrameRate = 30;
     const string MatteTriggeredSyncPreferenceKey = "RVM.MatteTriggeredSync";
 
     sealed class QueuedFrame
     {
         public ulong Sequence { get; }
         public RenderTexture Snapshot { get; }
+        public double FrameInterval { get; }
         public long ByteCount { get; }
 
-        public QueuedFrame(ulong sequence, RenderTexture snapshot)
+        public QueuedFrame(
+            ulong sequence,
+            RenderTexture snapshot,
+            double frameInterval
+        )
         {
             Sequence = sequence;
             Snapshot = snapshot;
+            FrameInterval = frameInterval;
             ByteCount = (long)snapshot.width * snapshot.height * 4;
         }
     }
 
     readonly List<QueuedFrame> _presentationQueue = new();
     readonly PresentationScheduler _presentationScheduler = new();
+    MatteGenerator _generator;
+    RvmOutputDisplay _display;
     QueuedFrame _submittedBoundary;
     RenderTexture _submittedOutput;
     ulong _submittedOutputVersion;
@@ -36,8 +43,14 @@ public sealed partial class RVMDemoController
     bool _matteTriggeredSync;
     string _handledInferenceError;
 
-    void InitializePresentation()
+    internal bool MatteTriggeredSync => _matteTriggeredSync;
+    internal string LastError => _generator?.LastError;
+    internal double InferenceTime => _generator?.InferenceTime ?? 0;
+
+    internal void Initialize(RvmOutputDisplay display)
     {
+        _generator = GetComponent<MatteGenerator>();
+        _display = display;
         _handledInferenceError = null;
         _matteTriggeredSync = PlayerPrefs.GetInt(
             MatteTriggeredSyncPreferenceKey,
@@ -46,42 +59,35 @@ public sealed partial class RVMDemoController
         ResetPresentation();
     }
 
-    void ReleasePresentation() => ResetPresentation();
-
-    void BindMatteTriggeredSyncToggle()
+    internal void Release()
     {
-        if (_matteTriggeredSyncToggle == null) return;
-
-        _matteTriggeredSyncToggle.UnregisterValueChangedCallback(
-            OnMatteTriggeredSyncChanged
-        );
-        _matteTriggeredSyncToggle.SetValueWithoutNotify(_matteTriggeredSync);
-        _matteTriggeredSyncToggle.RegisterValueChangedCallback(
-            OnMatteTriggeredSyncChanged
-        );
+        ResetPresentation();
+        _generator = null;
+        _display = null;
     }
 
-    void OnMatteTriggeredSyncChanged(ChangeEvent<bool> change)
+    internal void SetMatteTriggeredSync(bool enabled)
     {
-        _matteTriggeredSync = change.newValue;
-        PlayerPrefs.SetInt(MatteTriggeredSyncPreferenceKey, change.newValue ? 1 : 0);
+        _matteTriggeredSync = enabled;
+        PlayerPrefs.SetInt(MatteTriggeredSyncPreferenceKey, enabled ? 1 : 0);
         PlayerPrefs.Save();
         ResetSynchronization();
     }
 
-    void EnqueuePresentationFrame(Texture source)
+    internal void Enqueue(SourceFrame source)
     {
-        if (source == null || source.width <= 0 || source.height <= 0) return;
+        var texture = source.Texture;
+        if (texture == null || texture.width <= 0 || texture.height <= 0) return;
         if (_presentationQueue.Count > 0)
         {
             var previous = _presentationQueue[^1].Snapshot;
-            if (previous.width != source.width || previous.height != source.height)
+            if (previous.width != texture.width || previous.height != texture.height)
                 ResetSynchronization();
         }
 
         var snapshot = new RenderTexture(
-            source.width,
-            source.height,
+            texture.width,
+            texture.height,
             0,
             RenderTextureFormat.ARGB32,
             RenderTextureReadWrite.sRGB
@@ -96,15 +102,19 @@ public sealed partial class RVMDemoController
         // The source textures are mutable camera/video surfaces. A private copy
         // makes the queued color immutable and gives presentation and RVM the
         // exact same frame even when the source advances asynchronously.
-        Graphics.Blit(source, snapshot);
+        Graphics.Blit(texture, snapshot);
 
-        var frame = new QueuedFrame(_nextSequence++, snapshot);
+        var frame = new QueuedFrame(
+            _nextSequence++,
+            snapshot,
+            source.FrameInterval
+        );
         _presentationQueue.Add(frame);
         _queuedFrameBytes += frame.ByteCount;
         PrunePresentationQueue();
     }
 
-    void UpdatePresentation()
+    internal void Tick()
     {
         if (HandleInferenceError()) return;
 
@@ -123,6 +133,15 @@ public sealed partial class RVMDemoController
 
         TrySubmitBoundary();
         PrunePresentationQueue();
+    }
+
+    internal void ResetSynchronization()
+    {
+        _generator?.Reset();
+        ResetPresentation();
+        ClearTexture(_generator?.ModelInput);
+        ClearTexture(_generator?.Output);
+        _display?.Clear();
     }
 
     bool HandleInferenceError()
@@ -180,12 +199,11 @@ public sealed partial class RVMDemoController
         var output = _generator?.Output;
         if (output == null || output.width <= 0 || output.height <= 0) return;
 
-        PresentColor(frame.Snapshot, output.width, output.height);
-        var interval = 1.0 / GetPresentationFrameRate();
+        _display.PresentColor(frame.Snapshot, output.width, output.height);
         _presentationScheduler.Present(
             frame.Sequence,
             Time.unscaledTimeAsDouble,
-            interval,
+            frame.FrameInterval,
             firstFrame
         );
         ReleasePresentedFrames();
@@ -195,7 +213,7 @@ public sealed partial class RVMDemoController
     {
         // Preserve the finished matte before a later submission can reuse the
         // configured RVM output texture.
-        PresentMatte(
+        _display.PresentMatte(
             _submittedOutput,
             _submittedOutput.width,
             _submittedOutput.height
@@ -224,17 +242,6 @@ public sealed partial class RVMDemoController
             PresentFrame(frame, true);
         if (!_matteTriggeredSync)
             DiscardBoundaryOnlyIntermediateFrames();
-    }
-
-    float GetPresentationFrameRate()
-    {
-        if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count)
-            return FallbackFrameRate;
-        if (_sources[_currentSourceIndex].Kind == InputSourceKind.Camera)
-            return RequestedCameraFrameRate;
-
-        var frameRate = (float)_videoPlayer.frameRate;
-        return frameRate > 0 ? frameRate : FallbackFrameRate;
     }
 
     void PrunePresentationQueue()
@@ -300,13 +307,6 @@ public sealed partial class RVMDemoController
         _presentationQueue.RemoveAt(index);
     }
 
-    void ResetSynchronization()
-    {
-        _generator?.Reset();
-        ResetPresentation();
-        ClearDisplayTextures();
-    }
-
     void ResetPresentation()
     {
         for (var index = _presentationQueue.Count - 1; index >= 0; index--)
@@ -318,6 +318,15 @@ public sealed partial class RVMDemoController
         _queuedFrameBytes = 0;
         _presentationScheduler.Reset(_matteTriggeredSync);
     }
+
+    static void ClearTexture(RenderTexture texture)
+    {
+        if (texture == null) return;
+        var previous = RenderTexture.active;
+        RenderTexture.active = texture;
+        GL.Clear(false, true, Color.clear);
+        RenderTexture.active = previous;
+    }
 }
 
-} // namespace RVM
+} // namespace Rvm

@@ -4,21 +4,32 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 using UnityEngine.Video;
 
-namespace RVM
+namespace Rvm
 {
 
-public sealed partial class RVMDemoController
+internal readonly struct SourceFrame
+{
+    public Texture Texture { get; }
+    public double FrameInterval { get; }
+
+    public SourceFrame(Texture texture, float frameRate)
+    {
+        Texture = texture;
+        FrameInterval = 1.0 / frameRate;
+    }
+}
+
+[RequireComponent(typeof(VideoPlayer))]
+public sealed class RvmInputSource : MonoBehaviour
 {
     const float CameraStartTimeout = 5;
     const int RequestedCameraWidth = 1280;
     const int RequestedCameraHeight = 720;
     const int RequestedCameraFrameRate = 30;
+    const float FallbackFrameRate = 30;
     const string SelectedSourcePreferenceKey = "RVM.SelectedInputSource";
-
-    // Input source model
 
     enum InputSourceKind
     {
@@ -40,15 +51,13 @@ public sealed partial class RVMDemoController
         }
     }
 
-    // Source lifecycle state
-
     List<InputSource> _sources;
+    List<string> _sourceNames;
     VideoPlayer _videoPlayer;
     WebCamTexture _webcam;
     RenderTexture _orientedInput;
     Coroutine _switchCoroutine;
     Coroutine _loopCoroutine;
-    DropdownField _sourceDropdown;
     VideoPlayer.EventHandler _videoPrepareCompleted;
     VideoPlayer.ErrorEventHandler _videoErrorReceived;
     VideoPlayer.FrameReadyEventHandler _videoFrameReadyHandler;
@@ -57,20 +66,84 @@ public sealed partial class RVMDemoController
     int _currentSourceIndex = -1;
     int _sourceGeneration;
     bool _videoFrameReady;
-    string _sourceError;
+    string _statusMessage;
 
-    void InitializeSources()
+    internal event Action SynchronizationResetRequested;
+
+    internal IReadOnlyList<string> SourceNames => _sourceNames;
+    internal int SelectedSourceIndex => _selectedSourceIndex;
+    internal string StatusMessage => _statusMessage;
+
+    internal void Initialize()
     {
         _videoPlayer = GetComponent<VideoPlayer>();
         ConfigureVideoPlayer();
         if (_sources != null) return;
 
         _sources = EnumerateSources();
+        _sourceNames = _sources.Select(source => source.DisplayName).ToList();
         var selectedSource = PlayerPrefs.GetString(SelectedSourcePreferenceKey);
         _selectedSourceIndex = _sources.FindIndex(
             source => source.DisplayName == selectedSource
         );
         if (_selectedSourceIndex < 0 && _sources.Count > 0) _selectedSourceIndex = 0;
+    }
+
+    internal void Release()
+    {
+        _sourceGeneration++;
+        StopAllCoroutines();
+        _switchCoroutine = null;
+        StopCurrentSource();
+        _videoPlayer = null;
+    }
+
+    internal void SelectSource(int index)
+    {
+        if (index < 0 || index >= _sources.Count)
+        {
+            _selectedSourceIndex = -1;
+            SetStatus("No camera or MP4 input was found.");
+            return;
+        }
+        if (index == _currentSourceIndex && _switchCoroutine == null) return;
+
+        _selectedSourceIndex = index;
+        PlayerPrefs.SetString(
+            SelectedSourcePreferenceKey,
+            _sources[index].DisplayName
+        );
+        PlayerPrefs.Save();
+        if (_switchCoroutine != null) StopCoroutine(_switchCoroutine);
+        _switchCoroutine = StartCoroutine(SwitchSource(index));
+    }
+
+    internal bool TryGetFrame(out SourceFrame frame)
+    {
+        frame = default;
+        if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count)
+            return false;
+
+        Texture texture;
+        if (_sources[_currentSourceIndex].Kind == InputSourceKind.Camera)
+        {
+            if (_webcam == null || !_webcam.isPlaying || !_webcam.didUpdateThisFrame ||
+                _webcam.width <= 16 || _webcam.height <= 16)
+                return false;
+            texture = _webcam.videoVerticallyMirrored ?
+                GetOrientedInput(_webcam) : _webcam;
+        }
+        else
+        {
+            texture = _videoPlayer.texture;
+            if (!_videoFrameReady || texture == null ||
+                texture.width <= 0 || texture.height <= 0)
+                return false;
+            _videoFrameReady = false;
+        }
+
+        frame = new SourceFrame(texture, GetFrameRate());
+        return true;
     }
 
     static List<InputSource> EnumerateSources()
@@ -99,7 +172,7 @@ public sealed partial class RVMDemoController
 
     // Kept as a pure helper so editor validation can verify the same recursive,
     // relative-path ordering used by the runtime catalog.
-    static string[] EnumerateVideoPaths(string root)
+    internal static string[] EnumerateVideoPaths(string root)
     {
         if (!Directory.Exists(root)) return Array.Empty<string>();
         return Directory
@@ -125,53 +198,14 @@ public sealed partial class RVMDemoController
         _videoPlayer.sendFrameReadyEvents = true;
     }
 
-    void BindSourceDropdown()
-    {
-        if (_sourceDropdown == null) return;
-
-        _sourceDropdown.UnregisterValueChangedCallback(OnSourceDropdownChanged);
-        _sourceDropdown.choices = _sources.Select(source => source.DisplayName).ToList();
-        _sourceDropdown.SetEnabled(_sources.Count > 0);
-        if (_selectedSourceIndex >= 0 && _selectedSourceIndex < _sources.Count)
-            _sourceDropdown.SetValueWithoutNotify(_sources[_selectedSourceIndex].DisplayName);
-        else
-            _sourceDropdown.SetValueWithoutNotify(string.Empty);
-        _sourceDropdown.RegisterValueChangedCallback(OnSourceDropdownChanged);
-    }
-
-    void OnSourceDropdownChanged(ChangeEvent<string> change)
-    {
-        PlayerPrefs.SetString(SelectedSourcePreferenceKey, change.newValue);
-        PlayerPrefs.Save();
-        SelectSource(_sourceDropdown.index);
-    }
-
-    void SelectSource(int index)
-    {
-        if (index < 0 || index >= _sources.Count)
-        {
-            _selectedSourceIndex = -1;
-            SetStatus("No camera or MP4 input was found.");
-            return;
-        }
-        if (index == _currentSourceIndex && _switchCoroutine == null) return;
-
-        _selectedSourceIndex = index;
-        if (_sourceDropdown != null && _sourceDropdown.index != index)
-            _sourceDropdown.SetValueWithoutNotify(_sources[index].DisplayName);
-        if (_switchCoroutine != null) StopCoroutine(_switchCoroutine);
-        _switchCoroutine = StartCoroutine(SwitchSource(index));
-    }
-
     IEnumerator SwitchSource(int index)
     {
         var generation = ++_sourceGeneration;
         StopCurrentSource();
         SetStatus($"Switching to {_sources[index].DisplayName}…");
 
-        ResetSynchronization();
+        SynchronizationResetRequested?.Invoke();
         _currentSourceIndex = index;
-        _sourceError = null;
 
         var source = _sources[index];
         if (source.Kind == InputSourceKind.Camera)
@@ -224,7 +258,6 @@ public sealed partial class RVMDemoController
             yield break;
         }
 
-        UpdateInputImage();
         SetStatus($"Camera ready · {source.Location}");
     }
 
@@ -238,8 +271,10 @@ public sealed partial class RVMDemoController
         }
 
         _videoPrepareCompleted = player => OnVideoPrepared(player, generation);
-        _videoErrorReceived = (player, message) => OnVideoError(player, message, generation);
-        _videoFrameReadyHandler = (player, frame) => OnVideoFrameReady(player, generation);
+        _videoErrorReceived = (player, message) =>
+            OnVideoError(player, message, generation);
+        _videoFrameReadyHandler = (player, frame) =>
+            OnVideoFrameReady(player, generation);
         _videoLoopPointReached = player => OnVideoLoopPoint(player, generation);
         _videoPlayer.prepareCompleted += _videoPrepareCompleted;
         _videoPlayer.errorReceived += _videoErrorReceived;
@@ -262,7 +297,6 @@ public sealed partial class RVMDemoController
     {
         if (!IsCurrentVideoEvent(player, generation)) return;
         _videoFrameReady = false;
-        UpdateInputImage();
         player.Play();
         SetStatus($"Video ready · {_sources[_currentSourceIndex].Location}");
     }
@@ -277,7 +311,6 @@ public sealed partial class RVMDemoController
     {
         if (!IsCurrentVideoEvent(player, generation)) return;
         _videoFrameReady = true;
-        _cameraImage?.MarkDirtyRepaint();
     }
 
     void OnVideoLoopPoint(VideoPlayer player, int generation)
@@ -291,7 +324,7 @@ public sealed partial class RVMDemoController
     {
         _videoPlayer.Pause();
         _videoFrameReady = false;
-        ResetSynchronization();
+        SynchronizationResetRequested?.Invoke();
         _videoPlayer.frame = 0;
         yield return null;
         if (generation != _sourceGeneration) yield break;
@@ -318,7 +351,6 @@ public sealed partial class RVMDemoController
         if (_videoPlayer != null) _videoPlayer.Stop();
         _videoFrameReady = false;
         _currentSourceIndex = -1;
-        UpdateInputImage();
     }
 
     void DetachVideoEvents()
@@ -343,29 +375,13 @@ public sealed partial class RVMDemoController
     bool IsCurrentVideoEvent(VideoPlayer player, int generation) =>
         generation == _sourceGeneration && player == _videoPlayer;
 
-    bool TryGetSourceFrame(out Texture texture)
+    float GetFrameRate()
     {
-        texture = null;
-        if (_currentSourceIndex < 0 || _currentSourceIndex >= _sources.Count) return false;
-
         if (_sources[_currentSourceIndex].Kind == InputSourceKind.Camera)
-        {
-            if (_webcam == null || !_webcam.isPlaying || !_webcam.didUpdateThisFrame ||
-                _webcam.width <= 16 || _webcam.height <= 16)
-                return false;
-            texture = _webcam.videoVerticallyMirrored ?
-                GetOrientedInput(_webcam) : _webcam;
-        }
-        else
-        {
-            texture = _videoPlayer.texture;
-            if (!_videoFrameReady || texture == null || texture.width <= 0 || texture.height <= 0)
-                return false;
-            _videoFrameReady = false;
-        }
+            return RequestedCameraFrameRate;
 
-        _cameraImage?.MarkDirtyRepaint();
-        return true;
+        var frameRate = (float)_videoPlayer.frameRate;
+        return frameRate > 0 ? frameRate : FallbackFrameRate;
     }
 
     Texture GetOrientedInput(Texture source)
@@ -403,41 +419,11 @@ public sealed partial class RVMDemoController
 
     void SetSourceError(string message)
     {
-        ResetSynchronization();
-        _sourceError = message;
+        SynchronizationResetRequested?.Invoke();
         SetStatus(message);
     }
 
-    void UpdateInputImage()
-    {
-        if (_cameraImage == null) return;
-        _cameraImage.image = _inputDisplayTexture;
-        _cameraImage.uv = new Rect(0, 0, 1, 1);
-        _cameraImage.MarkDirtyRepaint();
-    }
-
-    void ClearDisplayTextures()
-    {
-        ClearTexture(_generator?.ModelInput);
-        ClearTexture(_generator?.Output);
-        ClearTexture(_presentedColorTexture);
-        ClearTexture(_presentedMatteTexture);
-        ClearTexture(_inputDisplayTexture);
-        ClearTexture(_alphaDisplayTexture);
-        ClearTexture(_compositeTexture);
-        _cameraImage?.MarkDirtyRepaint();
-        _alphaImage?.MarkDirtyRepaint();
-        _compositeImage?.MarkDirtyRepaint();
-    }
-
-    static void ClearTexture(RenderTexture texture)
-    {
-        if (texture == null) return;
-        var previous = RenderTexture.active;
-        RenderTexture.active = texture;
-        GL.Clear(false, true, Color.clear);
-        RenderTexture.active = previous;
-    }
+    void SetStatus(string message) => _statusMessage = message;
 }
 
-} // namespace RVM
+} // namespace Rvm

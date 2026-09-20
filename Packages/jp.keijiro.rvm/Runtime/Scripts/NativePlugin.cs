@@ -35,31 +35,59 @@ internal static class NativePlugin
     }
 
 #if UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern IntPtr RVMCreateWithComputeUnits(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMCreateWithComputeUnits",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern IntPtr RvmCreateWithComputeUnits(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string modelPath,
         ComputeUnits computeUnits,
         StringBuilder errorBuffer,
         int errorCapacity
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void RVMDestroy(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMDestroy",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern void RvmDestroy(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void RVMResetState(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMResetState",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern void RvmResetState(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMGetInputWidth(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetInputWidth",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmGetInputWidth(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMGetInputHeight(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetInputHeight",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmGetInputHeight(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMGetAlphaSlotCount(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetAlphaSlotCount",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmGetAlphaSlotCount(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMGetAlphaTextureInfo(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMGetAlphaTextureInfo",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmGetAlphaTextureInfo(
         IntPtr handle,
         int slotIndex,
         out int width,
@@ -67,11 +95,19 @@ internal static class NativePlugin
         out IntPtr nativeTexture
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMCanSubmit(IntPtr handle);
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMCanSubmit",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmCanSubmit(IntPtr handle);
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMSubmitBGRA(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMSubmitBGRA",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmSubmitBgra(
         IntPtr handle,
         IntPtr bgra,
         int width,
@@ -79,8 +115,12 @@ internal static class NativePlugin
         int rowBytes
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    static extern int RVMTryGetOutputInfoEx(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMTryGetOutputInfoEx",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    static extern int RvmTryGetOutputInfoEx(
         IntPtr handle,
         out int width,
         out int height,
@@ -92,15 +132,23 @@ internal static class NativePlugin
         int errorCapacity
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMMarkAlphaSlotGPUInFlight(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMMarkAlphaSlotGPUInFlight",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmMarkAlphaSlotGpuInFlight(
         IntPtr handle,
         int slotIndex,
         ulong generation
     );
 
-    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int RVMReleaseAlphaSlot(
+    [DllImport(
+        LibraryName,
+        EntryPoint = "RVMReleaseAlphaSlot",
+        CallingConvention = CallingConvention.Cdecl
+    )]
+    internal static extern int RvmReleaseAlphaSlot(
         IntPtr handle,
         int slotIndex,
         ulong generation
@@ -109,7 +157,7 @@ internal static class NativePlugin
     internal static CreationResult Create(string modelPath, ComputeUnits computeUnits)
     {
         var error = new StringBuilder(ErrorCapacity);
-        var handle = RVMCreateWithComputeUnits(
+        var handle = RvmCreateWithComputeUnits(
             modelPath,
             computeUnits,
             error,
@@ -118,7 +166,7 @@ internal static class NativePlugin
         return new CreationResult(handle, error.ToString());
     }
 
-    internal static void EnsureLoaded() => RVMGetAlphaSlotCount(IntPtr.Zero);
+    internal static void EnsureLoaded() => RvmGetAlphaSlotCount(IntPtr.Zero);
 
     internal static int TryGetOutputInfo(
         IntPtr handle,
@@ -132,7 +180,7 @@ internal static class NativePlugin
     )
     {
         var error = new StringBuilder(ErrorCapacity);
-        var result = RVMTryGetOutputInfoEx(
+        var result = RvmTryGetOutputInfoEx(
             handle,
             out width,
             out height,
@@ -154,13 +202,13 @@ internal static class NativePlugin
     internal static CreationResult Create(string modelPath, ComputeUnits computeUnits) =>
         new(IntPtr.Zero, "RVM inference is supported only on macOS.");
 
-    internal static void RVMDestroy(IntPtr handle) { }
-    internal static void RVMResetState(IntPtr handle) { }
-    internal static int RVMGetInputWidth(IntPtr handle) => 0;
-    internal static int RVMGetInputHeight(IntPtr handle) => 0;
-    internal static int RVMGetAlphaSlotCount(IntPtr handle) => 0;
+    internal static void RvmDestroy(IntPtr handle) { }
+    internal static void RvmResetState(IntPtr handle) { }
+    internal static int RvmGetInputWidth(IntPtr handle) => 0;
+    internal static int RvmGetInputHeight(IntPtr handle) => 0;
+    internal static int RvmGetAlphaSlotCount(IntPtr handle) => 0;
 
-    internal static int RVMGetAlphaTextureInfo(
+    internal static int RvmGetAlphaTextureInfo(
         IntPtr handle,
         int slotIndex,
         out int width,
@@ -174,9 +222,9 @@ internal static class NativePlugin
         return -1;
     }
 
-    internal static int RVMCanSubmit(IntPtr handle) => 0;
+    internal static int RvmCanSubmit(IntPtr handle) => 0;
 
-    internal static int RVMSubmitBGRA(
+    internal static int RvmSubmitBgra(
         IntPtr handle,
         IntPtr bgra,
         int width,
@@ -184,13 +232,13 @@ internal static class NativePlugin
         int rowBytes
     ) => -1;
 
-    internal static int RVMMarkAlphaSlotGPUInFlight(
+    internal static int RvmMarkAlphaSlotGpuInFlight(
         IntPtr handle,
         int slotIndex,
         ulong generation
     ) => -1;
 
-    internal static int RVMReleaseAlphaSlot(
+    internal static int RvmReleaseAlphaSlot(
         IntPtr handle,
         int slotIndex,
         ulong generation
