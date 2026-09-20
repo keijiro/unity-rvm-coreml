@@ -22,9 +22,15 @@ namespace ProjectBootstrap
 public static class ProjectValidator
 {
     const string LibraryName = "RVMPlugin";
+    const string ModelRelativePath =
+        "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
     const int ErrorCapacity = 1024;
     const int InputWidth = 1280;
     const int InputHeight = 720;
+    const int AlphaSlotCount = 3;
+
+    // These declarations intentionally duplicate the runtime ABI. Validation must
+    // exercise the plugin directly so wrapper changes cannot hide an ABI regression.
 
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     static extern IntPtr RVMCreateWithComputeUnits(
@@ -202,10 +208,7 @@ public static class ProjectValidator
 
     static void ValidateNativePlugin()
     {
-        var modelPath = Path.Combine(
-            Application.streamingAssetsPath,
-            "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel"
-        );
+        var modelPath = Path.Combine(Application.streamingAssetsPath, ModelRelativePath);
         var error = new StringBuilder(ErrorCapacity);
         var stopwatch = Stopwatch.StartNew();
         var handle = RVMCreateWithComputeUnits(
@@ -237,7 +240,7 @@ public static class ProjectValidator
     static void ValidateAlphaSlots(IntPtr handle)
     {
         var count = RVMGetAlphaSlotCount(handle);
-        if (count != 3)
+        if (count != AlphaSlotCount)
             throw new InvalidOperationException($"Unexpected alpha slot count: {count}.");
         for (var index = 0; index < count; index++)
         {

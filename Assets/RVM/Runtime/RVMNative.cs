@@ -15,6 +15,8 @@ public enum RVMComputeUnits
 
 internal static class RVMNative
 {
+    // Keep these declarations aligned with RVMPlugin's C ABI. In particular, the
+    // integer return values encode success, retry, and error states rather than bools.
     const string LibraryName = "RVMPlugin";
     const int ErrorCapacity = 1024;
 
@@ -143,6 +145,8 @@ internal static class RVMNative
         return result;
     }
 #else
+    // Non-macOS stubs keep callers platform-agnostic and let the same scenes and
+    // assemblies import on unsupported build targets.
     internal static void EnsureLoaded() { }
 
     internal static CreationResult Create(string modelPath, RVMComputeUnits computeUnits) =>

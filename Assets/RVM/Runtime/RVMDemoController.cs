@@ -14,12 +14,25 @@ namespace RVM
 [RequireComponent(typeof(PanelRenderer), typeof(VideoPlayer))]
 public sealed partial class RVMDemoController : MonoBehaviour
 {
+    const int ModelInputWidth = 1280;
+    const int ModelInputHeight = 720;
+    const int AlphaSlotCount = 3;
+    const string ModelRelativePath =
+        "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
+
+    // Public properties
+
     [field:SerializeField]
     public RVMComputeUnits ComputeUnits { get; set; } = RVMComputeUnits.All;
+
+    // Serialized resources
 
     [SerializeField, HideInInspector] Shader _preprocessShader = null;
     [SerializeField, HideInInspector] Shader _visualizeShader = null;
 
+    // Native alpha textures remain leased until the command stream reaches the
+    // corresponding fence. Releasing one earlier lets native inference overwrite
+    // memory that Unity may still be sampling.
     readonly struct AlphaLease
     {
         public int SlotIndex { get; }
@@ -54,6 +67,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
     Image _alphaImage;
     Label _statusLabel;
 
+    // MonoBehaviour implementation
+
     void OnEnable()
     {
         _disposed = false;
@@ -72,10 +87,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         if (_preprocessMaterial == null || _visualizeMaterial == null) return;
         SelectSource(_selectedSourceIndex);
 
-        var modelPath = Path.Combine(
-            Application.streamingAssetsPath,
-            "Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel"
-        );
+        var modelPath = Path.Combine(Application.streamingAssetsPath, ModelRelativePath);
         var computeUnits = ComputeUnits;
         SetStatus("Loading RVM MobileNetV3 model…");
         RVMNative.EnsureLoaded();
@@ -207,7 +219,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _plugin = result.Handle;
         _inputWidth = RVMNative.RVMGetInputWidth(_plugin);
         _inputHeight = RVMNative.RVMGetInputHeight(_plugin);
-        if (_inputWidth != 1280 || _inputHeight != 720)
+        if (_inputWidth != ModelInputWidth || _inputHeight != ModelInputHeight)
         {
             SetStatus($"Unexpected model input size: {_inputWidth} × {_inputHeight}.");
             RVMNative.RVMDestroy(_plugin);
@@ -269,6 +281,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _preprocessMaterial.SetFloat("_TargetAspect", (float)_inputWidth / _inputHeight);
         Graphics.Blit(texture, _inputTexture, _preprocessMaterial);
 
+        // The callback can outlive a source switch. Capturing the generation keeps
+        // pixels from the previous source out of the recurrent model state.
         var generation = _sourceGeneration;
         _readbackPending = true;
         AsyncGPUReadback.Request(
@@ -353,7 +367,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
     bool CreateAlphaTextures()
     {
         var count = RVMNative.RVMGetAlphaSlotCount(_plugin);
-        if (count != 3)
+        if (count != AlphaSlotCount)
         {
             SetStatus($"Unexpected native alpha slot count: {count}.");
             return false;
@@ -369,7 +383,8 @@ public sealed partial class RVMDemoController : MonoBehaviour
                 out var height,
                 out var pointer
             );
-            if (result != 1 || width != 1280 || height != 720 || pointer == IntPtr.Zero)
+            if (result != 1 || width != ModelInputWidth ||
+                height != ModelInputHeight || pointer == IntPtr.Zero)
             {
                 DestroyAlphaTextures();
                 SetStatus($"Could not obtain GPU alpha slot {index}.");

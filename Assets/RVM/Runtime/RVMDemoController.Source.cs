@@ -12,6 +12,14 @@ namespace RVM
 
 public sealed partial class RVMDemoController
 {
+    const float CameraStartTimeout = 5;
+    const int RequestedCameraWidth = 1280;
+    const int RequestedCameraHeight = 720;
+    const int RequestedCameraFrameRate = 30;
+    const string SelectedSourcePreferenceKey = "RVM.SelectedInputSource";
+
+    // Input source model
+
     enum InputSourceKind
     {
         Camera,
@@ -32,8 +40,7 @@ public sealed partial class RVMDemoController
         }
     }
 
-    const float CameraStartTimeout = 5;
-    const string SelectedSourcePreferenceKey = "RVM.SelectedInputSource";
+    // Source lifecycle state
 
     List<InputSource> _sources;
     VideoPlayer _videoPlayer;
@@ -194,7 +201,12 @@ public sealed partial class RVMDemoController
 
         try
         {
-            _webcam = new WebCamTexture(source.Location, 1280, 720, 30);
+            _webcam = new WebCamTexture(
+                source.Location,
+                RequestedCameraWidth,
+                RequestedCameraHeight,
+                RequestedCameraFrameRate
+            );
             _webcam.Play();
         }
         catch (Exception exception)
@@ -254,7 +266,7 @@ public sealed partial class RVMDemoController
 
     void OnVideoPrepared(VideoPlayer player, int generation)
     {
-        if (generation != _sourceGeneration || player != _videoPlayer) return;
+        if (!IsCurrentVideoEvent(player, generation)) return;
         _videoFrameReady = false;
         UpdateInputImage();
         player.Play();
@@ -263,20 +275,20 @@ public sealed partial class RVMDemoController
 
     void OnVideoError(VideoPlayer player, string message, int generation)
     {
-        if (generation != _sourceGeneration || player != _videoPlayer) return;
+        if (!IsCurrentVideoEvent(player, generation)) return;
         SetSourceError($"Video decode failed: {message}");
     }
 
     void OnVideoFrameReady(VideoPlayer player, int generation)
     {
-        if (generation != _sourceGeneration || player != _videoPlayer) return;
+        if (!IsCurrentVideoEvent(player, generation)) return;
         _videoFrameReady = true;
         _cameraImage?.MarkDirtyRepaint();
     }
 
     void OnVideoLoopPoint(VideoPlayer player, int generation)
     {
-        if (generation != _sourceGeneration || player != _videoPlayer) return;
+        if (!IsCurrentVideoEvent(player, generation)) return;
         if (_loopCoroutine != null) StopCoroutine(_loopCoroutine);
         _loopCoroutine = StartCoroutine(RestartVideoLoop(generation));
     }
@@ -334,6 +346,11 @@ public sealed partial class RVMDemoController
         _videoLoopPointReached = null;
     }
 
+    // VideoPlayer may deliver callbacks after a source switch. Both checks are
+    // required because the component is reused while its event generation changes.
+    bool IsCurrentVideoEvent(VideoPlayer player, int generation) =>
+        generation == _sourceGeneration && player == _videoPlayer;
+
     bool TryGetSourceFrame(
         out Texture texture,
         out int width,
@@ -377,6 +394,9 @@ public sealed partial class RVMDemoController
     IEnumerator ResetInferenceState(int generation)
     {
         if (_plugin == IntPtr.Zero) yield break;
+
+        // Resetting recurrent state also invalidates native slot generations, so
+        // wait until Unity has stopped sampling every external alpha texture.
         while (_alphaLeases.Count > 0)
         {
             ReleaseCompletedAlphaSlots();
