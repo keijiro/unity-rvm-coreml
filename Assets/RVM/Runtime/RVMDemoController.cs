@@ -16,6 +16,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
     PanelRenderer _panelRenderer;
     Image _cameraImage;
     Image _alphaImage;
+    Image _compositeImage;
     Label _statusLabel;
 
     // MonoBehaviour implementation
@@ -26,6 +27,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _generator = GetComponent<MatteGenerator>();
 
         InitializeSources();
+        InitializeComposite();
         _panelRenderer = GetComponent<PanelRenderer>();
         _panelRenderer.RegisterUIReloadCallback(OnUIReload);
         SelectSource(_selectedSourceIndex);
@@ -38,6 +40,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
 
         UpdateInputImage();
         _alphaImage?.MarkDirtyRepaint();
+        UpdateComposite();
         RefreshStatus();
     }
 
@@ -47,6 +50,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         StopAllCoroutines();
         _switchCoroutine = null;
         StopCurrentSource();
+        ReleaseComposite();
         if (_panelRenderer != null)
             _panelRenderer.UnregisterUIReloadCallback(OnUIReload);
         _panelRenderer = null;
@@ -63,12 +67,15 @@ public sealed partial class RVMDemoController : MonoBehaviour
         UnbindUI();
         _cameraImage = root.Q<Image>("cameraImage");
         _alphaImage = root.Q<Image>("alphaImage");
+        _compositeImage = root.Q<Image>("compositeImage");
         _statusLabel = root.Q<Label>("statusLabel");
         _sourceDropdown = root.Q<DropdownField>("sourceDropdown");
 
         _cameraImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.scaleMode = ScaleMode.ScaleToFit;
+        _compositeImage.scaleMode = ScaleMode.ScaleToFit;
         _alphaImage.image = _generator.Output;
+        _compositeImage.image = _compositeTexture;
         BindSourceDropdown();
         UpdateInputImage();
         RefreshStatus();
@@ -81,6 +88,7 @@ public sealed partial class RVMDemoController : MonoBehaviour
         _sourceDropdown = null;
         _cameraImage = null;
         _alphaImage = null;
+        _compositeImage = null;
         _statusLabel = null;
     }
 

@@ -19,9 +19,13 @@
                 <ui:Label text="Model input" class="viewport-title" />
                 <ui:Image name="cameraImage" class="viewport-image" />
             </ui:VisualElement>
-            <ui:VisualElement class="viewport-panel viewport-panel-right">
+            <ui:VisualElement class="viewport-panel viewport-panel-middle">
                 <ui:Label text="Alpha matte" class="viewport-title" />
                 <ui:Image name="alphaImage" class="viewport-image" />
+            </ui:VisualElement>
+            <ui:VisualElement class="viewport-panel viewport-panel-right">
+                <ui:Label text="Tinted composite" class="viewport-title" />
+                <ui:Image name="compositeImage" class="viewport-image" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

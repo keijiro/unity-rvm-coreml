@@ -23,6 +23,7 @@ public sealed class ProjectConfigurationTests
     const string MainUIPath = "Assets/UI/Main.uxml";
     const string PanelSettingsPath = "Assets/UI/DefaultSettings.asset";
     const string OutputTexturePath = "Assets/RVM/Runtime/RVMMatte.renderTexture";
+    const string CompositeShaderPath = "Assets/RVM/Runtime/TintedComposite.shader";
     const string PackagePath = "Packages/jp.keijiro.rvm";
     const string PreprocessShaderPath = PackagePath + "/Runtime/Shaders/Preprocess.shader";
     const string OutputShaderPath = PackagePath + "/Runtime/Shaders/VisualizeAlpha.shader";
@@ -41,11 +42,13 @@ public sealed class ProjectConfigurationTests
         AssertElement<DropdownField>(root, "sourceDropdown");
         AssertElement<Image>(root, "cameraImage");
         AssertElement<Image>(root, "alphaImage");
+        AssertElement<Image>(root, "compositeImage");
         AssertElement<Label>(root, "statusLabel");
     }
 
     [TestCase(PreprocessShaderPath)]
     [TestCase(OutputShaderPath)]
+    [TestCase(CompositeShaderPath)]
     public void ShaderCompilesWithoutErrors(string path)
     {
         var shader = LoadAsset<Shader>(path);
@@ -82,9 +85,11 @@ public sealed class ProjectConfigurationTests
     public void DemoControllerReferencesExpectedAssets()
     {
         var controller = OpenDemoController();
+        var demo = new SerializedObject(controller);
         var panel = new SerializedObject(controller.GetComponent<PanelRenderer>());
         var generator = new SerializedObject(controller.GetComponent<MatteGenerator>());
 
+        AssertAssetReference(demo, "_compositeShader", CompositeShaderPath);
         AssertAssetReference(panel, "sourceAsset", MainUIPath);
         AssertAssetReference(panel, "m_PanelSettings", PanelSettingsPath);
         AssertAssetReference(generator, "_preprocessShader", PreprocessShaderPath);

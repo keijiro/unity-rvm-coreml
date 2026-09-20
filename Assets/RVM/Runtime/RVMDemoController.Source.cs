@@ -427,8 +427,10 @@ public sealed partial class RVMDemoController
     {
         ClearTexture(_generator?.ModelInput);
         ClearTexture(_generator?.Output);
+        ClearTexture(_compositeTexture);
         _cameraImage?.MarkDirtyRepaint();
         _alphaImage?.MarkDirtyRepaint();
+        _compositeImage?.MarkDirtyRepaint();
     }
 
     static void ClearTexture(RenderTexture texture)
