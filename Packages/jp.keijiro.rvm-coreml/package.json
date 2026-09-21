@@ -11,5 +11,8 @@
   "changelogUrl": "https://github.com/keijiro/unity-rvm-coreml/blob/main/CHANGELOG.md",
   "documentationUrl": "https://github.com/keijiro/unity-rvm-coreml",
   "licensesUrl": "https://github.com/keijiro/unity-rvm-coreml/blob/main/LICENSE",
-  "license": "SEE LICENSE IN LICENSE"
+  "license": "SEE LICENSE IN LICENSE",
+  "_upm": {
+    "changelog": "- Initial release."
+  }
 }

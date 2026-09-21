@@ -1,14 +1,15 @@
 RVM Core ML - Licensing
 =======================
 
-This package contains material under two different licenses. It combines
+This repository contains material under two different licenses. It combines
 code released into the public domain with a pre-trained model that stays
 under the GPL. Which license applies depends on which file you are using.
 
 1. Model weights - GNU General Public License v3.0
 --------------------------------------------------
 
-    Runtime/Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel
+    Packages/jp.keijiro.rvm-coreml/Runtime/Models/
+        rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel
 
 This file is third-party material taken from the Robust Video Matting
 project and is NOT covered by the Unlicense below. Its upstream copyright
@@ -21,8 +22,8 @@ See THIRD_PARTY_NOTICES.md for attribution details, and
 2. Everything else - the Unlicense
 ----------------------------------
 
-All other files comprising the RVM Core ML package are released under the
-Unlicense, reproduced in full below.
+All other files in this repository are released under the Unlicense,
+reproduced in full below.
 
 
 The Unlicense

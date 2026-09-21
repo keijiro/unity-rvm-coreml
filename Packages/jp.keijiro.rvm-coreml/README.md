@@ -1,86 +1,82 @@
-# RVM Core ML
+# RVM Core ML Package for Unity
 
-This package provides `Rvm.CoreML.MatteGenerator`, a macOS implementation of Robust Video
-Matting using Core ML and Metal. It includes the native plugin, shaders, and the
-fixed-shape 1280 x 720 MobileNetV3 model required by the generator.
+![demo](https://github.com/user-attachments/assets/c5ba4619-9b60-475c-9606-0896ef572131)
 
-## Usage
+This macOS-only Unity package runs Robust Video Matting (RVM) using Core ML
+and Metal.
 
-Add `MatteGenerator` to a GameObject and assign a texture to `Input`. The processed
-result is written to `Output`; when no output is assigned, the component creates
-and owns a 1280 x 720 render texture. Input orientation is the caller's
-responsibility; vertically mirrored sources must be corrected before submission.
+## Running the demo
 
-`MatteGenerator` processes `Input` automatically while the component is active.
-Alternatively, call `Process` to submit a texture explicitly. Submission is
-non-blocking and returns `false` while initialization, another frame, or a reset is
-in progress. Use `IsReady`, `LastError`, and `InferenceTime` to observe its state.
+Open the project with Unity `6000.6.1f1`, then run `Assets/Main.unity`. The
+Editor and standalone player require Metal and macOS 13 or newer.
 
-RVM is recurrent: each successful inference carries temporal state into the next
-frame. Call `Reset` after a discontinuity such as seeking or switching input sources.
+To use a video file as the source, place it in `Assets/StreamingAssets`. The
+demo scans this folder automatically and lists available videos in the source
+dropdown.
 
-## Architecture
+## MatteGenerator
 
-The package keeps Unity-facing orchestration in C# and model execution in a native
-Objective-C++ plugin:
+Add `Rvm.CoreML.MatteGenerator` to a GameObject to use the inference pipeline.
+`ComputeUnits` selects `CpuOnly`, `CpuAndGpu`, `All`, or `CpuAndNeuralEngine`;
+changes take effect the next time the component is enabled.
 
-| Layer | Responsibility |
-| --- | --- |
-| `MatteGenerator.cs` | Public component properties and methods. |
-| `MatteGenerator.Internal.cs` | Component lifetime, frame scheduling, Unity GPU work, and resource ownership. |
-| `NativePlugin.cs` | Managed declarations for the plugin's narrow C ABI. |
-| `RVMPlugin.bundle` | Core ML model execution, recurrent state, result synchronization, and the shared alpha texture pool. |
-| `Preprocess.shader` / `VisualizeAlpha.shader` | Input normalization and final color/alpha composition. |
+Assign a `Texture` to `Input` in the Inspector or from C# for continuous
+processing. The generator center-crops each available frame to the model's
+1280 × 720 aspect ratio.
 
-The native boundary uses an opaque context handle and plain C values. Objective-C,
-Core ML, Metal, and C++ types therefore never become part of the managed ABI. The C#
-side owns Unity object lifetime and rendering order; the native side owns objects
-that must remain close to Core ML, including the loaded model, recurrent tensors,
-serial inference queue, and IOSurface-backed alpha buffers.
+For one-shot input, call `Process` without changing `Input`:
 
-### Frame data flow
+```csharp
+if (generator.IsReady && generator.Process(sourceTexture))
+    Debug.Log("Frame accepted");
+```
 
-1. `Preprocess.shader` center-crops and scales the source into a
-   fixed 1280 x 720 `RenderTexture`. This normalized image is retained as the RGB
-   source for the final result.
-2. `AsyncGPUReadback` returns that texture as BGRA bytes. The C# layer passes a
-   pointer to the plugin only for the duration of the submission call, so the plugin
-   immediately copies the pixels into a Core Video input buffer.
-3. The plugin schedules Core ML prediction on a serial queue. Serial execution is
-   required because the four recurrent output tensors from one frame become the
-   recurrent inputs to the next.
-4. Core ML writes the alpha result directly into a one-channel Core Video buffer
-   backed by an IOSurface. The same storage has a Metal texture view, which C# wraps
-   with `Texture2D.CreateExternalTexture`; no full-frame copy is needed on the return
-   path.
-5. C# polls a single-result mailbox and composites the normalized RGB texture with
-   the returned alpha texture. If `Output` has no alpha channel, all available color
-   channels receive the matte instead. The model's foreground output is not used.
+`Process` returns `false` while the model is loading, inference or reset is in
+progress, or the input is invalid. It copies accepted input immediately and
+does not retain the supplied texture reference. After the one-shot frame
+completes, a configured continuous `Input` resumes automatically.
 
-Only one input is submitted at a time. Frame numbers and state generations reject
-stale results after resets or component lifetime changes.
+`Output` accepts an externally owned `RenderTexture` of any size. If it is
+omitted, the component creates and owns a 1280 × 720 alpha-capable output,
+available through the same property. An output format with an alpha channel
+receives normalized input RGB plus the matte in A. A format without alpha
+receives the matte in every available color channel. The component never
+destroys an externally supplied output.
 
-### Resource ownership and synchronization
+Call `Reset()` when changing sources or looping a video to discard pending
+frames and clear recurrent state. `InferenceTime` reports the most recently
+completed Core ML inference in milliseconds; `IsReady` and `LastError` expose
+load and error state.
 
-The component owns its preprocessing texture, materials, external `Texture2D`
-wrappers, and any output texture it creates itself. A caller-assigned `Output`
-remains caller-owned. Disabling the component drains pending readbacks before these
-Unity resources and the native context are destroyed.
+## Model and attribution
 
-The native context owns three alpha slots. A slot moves from inference to a ready
-result and then to Unity GPU use. After queuing the composite, C# attaches a graphics
-fence and keeps the slot leased until the fence passes. Generation tokens prevent a
-late release from freeing a slot that has already been reused. This protocol lets
-inference and rendering overlap without allowing Core ML to overwrite a texture that
-Unity is still sampling.
+The bundled model is
+`rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel` from
+[PeterL1n/RobustVideoMatting][rvm], release `v1.0.0`. It uses MobileNetV3, a
+fixed 1280 × 720 input, downsample ratio 0.375, and INT8-quantized weights.
+Its SHA-256 is:
 
-`Reset` is deferred until pending readback and GPU leases have completed. It then
-clears the recurrent state and frame sequence while keeping the loaded model and
-allocated textures available for subsequent frames.
+```text
+68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794
+```
 
-### Model deployment
+RVM is described in *Robust High-Resolution Video Matting with Temporal
+Guidance* (Lin et al., WACV 2022). See [THIRD_PARTY_NOTICES.md][notices] for
+upstream licensing information.
 
-In the Editor, the model is loaded directly from `Runtime/Models`. During a Player
-build, `ModelBuildProcessor` adds it to `StreamingAssets/Models`, where the runtime
-can address it by file path. Core ML compiles the `.mlmodel` on first use and the
-native layer reuses the compiled model from the user cache on later loads.
+## Demo matte-triggered synchronization
+
+The demo implements matte-triggered synchronization to keep video presentation
+from slowing down to the RVM inference rate. The demo snapshots each accepted
+source frame so that video can advance independently while each completed matte
+remains paired with the exact frame used for inference.
+
+With **Matte-Triggered Sync** enabled (the default), the demo presents queued
+color frames at the source cadence while RVM runs asynchronously. Intermediate
+frames use the preceding matte, and presentation does not advance past the frame
+currently being processed. When disabled, the demo waits for inference before
+presenting each matched color and matte, so video advances at the matte
+generation rate and intermediate frames are dropped.
+
+[rvm]: https://github.com/PeterL1n/RobustVideoMatting
+[notices]: Packages/jp.keijiro.rvm-coreml/THIRD_PARTY_NOTICES.md
