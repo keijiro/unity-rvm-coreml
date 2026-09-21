@@ -4,6 +4,7 @@
   "displayName": "RVM Core ML",
   "description": "Real-time Robust Video Matting for macOS using Core ML and Metal.",
   "unity": "6000.0",
+  "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
     "com.unity.collections": "2.4.3"
   },
