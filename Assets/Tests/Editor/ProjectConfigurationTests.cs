@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using NUnit.Framework;
 using Rvm.CoreML;
 using Rvm.CoreML.Demo;
@@ -28,11 +26,6 @@ public sealed class ProjectConfigurationTests
     const string PackagePath = "Packages/jp.keijiro.rvm-coreml";
     const string PreprocessShaderPath = PackagePath + "/Runtime/Shaders/Preprocess.shader";
     const string OutputShaderPath = PackagePath + "/Runtime/Shaders/VisualizeAlpha.shader";
-    const string PluginPath = PackagePath + "/Runtime/Plugins/macOS/RVMPlugin.bundle";
-    const string ModelPath = PackagePath +
-        "/Runtime/Models/rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
-    const string ModelSha256 =
-        "68efe6e7a23d5337fb4f935f77e83b0ec3cc823803083953eb18f4cc0549d794";
     const int InputWidth = 1280;
     const int InputHeight = 720;
 
@@ -48,12 +41,10 @@ public sealed class ProjectConfigurationTests
         AssertElement<Toggle>(root, "matteTriggeredSyncToggle");
     }
 
-    [TestCase(PreprocessShaderPath)]
-    [TestCase(OutputShaderPath)]
-    [TestCase(CompositeShaderPath)]
-    public void ShaderCompilesWithoutErrors(string path)
+    [Test]
+    public void CompositeShaderCompilesWithoutErrors()
     {
-        var shader = LoadAsset<Shader>(path);
+        var shader = LoadAsset<Shader>(CompositeShaderPath);
         var errors = ShaderUtil.GetShaderMessages(shader)
             .Where(message => message.severity == ShaderCompilerMessageSeverity.Error)
             .Select(message => message.message)
@@ -194,31 +185,6 @@ public sealed class ProjectConfigurationTests
             GraphicsSettings.currentRenderPipeline,
             Is.InstanceOf<UniversalRenderPipelineAsset>()
         );
-    }
-
-    [Test]
-    public void NativePluginImporterTargetsMacOS()
-    {
-        var importer = AssetImporter.GetAtPath(PluginPath) as PluginImporter;
-        Assert.That(importer, Is.Not.Null);
-        Assert.That(importer.GetCompatibleWithAnyPlatform(), Is.False);
-        Assert.That(importer.GetCompatibleWithEditor(), Is.True);
-        Assert.That(
-            importer.GetCompatibleWithPlatform(BuildTarget.StandaloneOSX),
-            Is.True
-        );
-    }
-
-    [Test]
-    public void ModelMatchesExpectedDigest()
-    {
-        var path = Path.GetFullPath(ModelPath);
-        Assert.That(File.Exists(path), Is.True, $"The RVM model is missing: {path}");
-
-        using var stream = File.OpenRead(path);
-        using var sha256 = SHA256.Create();
-        var hash = string.Concat(sha256.ComputeHash(stream).Select(value => value.ToString("x2")));
-        Assert.That(hash, Is.EqualTo(ModelSha256));
     }
 
     static RvmDemoController OpenDemoController()

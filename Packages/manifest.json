@@ -9,6 +9,9 @@
     "com.unity.modules.uielements": "1.0.0",
     "com.unity.modules.video": "1.0.0"
   },
+  "testables": [
+    "jp.keijiro.rvm-coreml"
+  ],
   "scopedRegistries": [
     {
       "name": "Keijiro",

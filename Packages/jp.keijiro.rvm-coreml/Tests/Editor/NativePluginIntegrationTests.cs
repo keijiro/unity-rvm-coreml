@@ -6,16 +6,20 @@ using System.Text;
 using System.Threading;
 using NUnit.Framework;
 using Rvm.CoreML;
+using UnityEditor.PackageManager;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Rvm.CoreML.Tests.Editor
 {
 
 [Category("NativeIntegration")]
 [Timeout(120000)]
+[UnityPlatform(RuntimePlatform.OSXEditor)]
 public sealed class NativePluginIntegrationTests
 {
     const string LibraryName = "RVMPlugin";
-    const string ModelPath = "Packages/jp.keijiro.rvm-coreml/Runtime/Models/" +
+    const string ModelPackagePath = "Runtime/Models/" +
         "rvm_mobilenetv3_1280x720_s0.375_int8.mlmodel";
     const int ErrorCapacity = 1024;
     const int InputWidth = 1280;
@@ -149,7 +153,9 @@ public sealed class NativePluginIntegrationTests
     [OneTimeSetUp]
     public void CreatePlugin()
     {
-        var modelPath = Path.GetFullPath(ModelPath);
+        var package = PackageInfo.FindForAssembly(typeof(MatteGenerator).Assembly);
+        Assert.That(package, Is.Not.Null, "The RVM Core ML package could not be resolved.");
+        var modelPath = Path.Combine(package.resolvedPath, ModelPackagePath);
         var error = new StringBuilder(ErrorCapacity);
         _handle = RvmCreateWithComputeUnits(
             modelPath,

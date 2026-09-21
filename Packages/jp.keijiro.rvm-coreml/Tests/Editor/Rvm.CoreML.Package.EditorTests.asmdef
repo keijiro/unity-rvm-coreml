@@ -1,0 +1,13 @@
+{
+  "name": "Rvm.CoreML.Package.EditorTests",
+  "rootNamespace": "Rvm.CoreML.Tests.Editor",
+  "references": [
+    "Rvm.CoreML.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
