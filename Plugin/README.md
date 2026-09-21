@@ -75,7 +75,7 @@ queued blocks retain raw pointers to context-owned state.
 From the repository root, run:
 
 ```sh
-./build-native-plugin.sh
+./Plugin/build.sh
 ```
 
 The script reads the Unity version from `ProjectSettings/ProjectVersion.txt`, uses

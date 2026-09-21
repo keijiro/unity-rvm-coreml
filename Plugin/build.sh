@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-project_dir="${0:A:h}"
-native_dir="$project_dir/Plugin"
+native_dir="${0:A:h}"
+project_dir="$native_dir:h"
 source_files=(
     "$native_dir/RVMPlugin.mm"
     "$native_dir/RVMContext.mm"
