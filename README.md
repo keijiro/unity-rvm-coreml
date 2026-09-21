@@ -5,6 +5,15 @@
 This macOS-only Unity package runs Robust Video Matting (RVM) using Core ML
 and Metal.
 
+## Installation
+
+The RVM Core ML package (`jp.keijiro.rvm-coreml`) can be installed via the
+"Keijiro" scoped registry using Package Manager. To add the registry to your
+project, please follow [these instructions].
+
+[these instructions]:
+  https://gist.github.com/keijiro/f8c7e8ff29bfe63d86b888901b82644c
+
 ## Running the demo
 
 Open the project with Unity `6000.6.1f1`, then run `Assets/Main.unity`. The
