@@ -1,5 +1,7 @@
 # RVM Core ML Package for Unity
 
+![demo](https://github.com/user-attachments/assets/c5ba4619-9b60-475c-9606-0896ef572131)
+
 This macOS-only Unity package runs Robust Video Matting (RVM) using Core ML
 and Metal.
 
