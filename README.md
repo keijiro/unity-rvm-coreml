@@ -10,6 +10,10 @@ and Metal.
 Open the project with Unity `6000.6.1f1`, then run `Assets/Main.unity`. The
 Editor and standalone player require Metal and macOS 13 or newer.
 
+To use a video file as the source, place it in `Assets/StreamingAssets`. The
+demo scans this folder automatically and lists available videos in the source
+dropdown.
+
 ## MatteGenerator
 
 Add `Rvm.CoreML.MatteGenerator` to a GameObject to use the inference pipeline.
