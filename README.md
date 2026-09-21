@@ -18,6 +18,46 @@ fresh copy of the model and rebuild the plugin from source, run:
 ./build-native-plugin.sh
 ```
 
+## Matte-triggered synchronization
+
+The demo separates source capture, RVM inference, and presentation because
+camera and `VideoPlayer` textures can change while an inference is in flight.
+`RvmPresentationPipeline` therefore copies every accepted source frame into an
+immutable snapshot, assigns it a sequence number, and stores its source frame
+interval. The same snapshot supplies both the displayed color and the input to
+RVM, so a completed matte always has an exact color-frame counterpart.
+
+When the **Matte-Triggered Sync** toggle is on (the default), the newest queued
+snapshot that RVM accepts becomes a *presentation boundary*. The first boundary
+is displayed immediately. For later boundaries, `PresentationScheduler`
+advances the queued color snapshots from the previously displayed sequence at
+the source cadence, at most once per Unity update. New frames may continue to
+enter the queue, but presentation never passes the active boundary.
+
+RVM output is asynchronous. The pipeline records `MatteGenerator.OutputVersion`
+when it submits a boundary and treats a version change as completion. This is a
+CPU-visible signal that the matching output blit has entered Unity's graphics
+stream; copying the result afterwards stays correctly ordered on the GPU and
+does not require a synchronous readback. Even if inference finishes early, the
+pipeline holds that matte until color presentation reaches the same boundary.
+It then copies the matte into a presentation-owned texture before the generator
+can reuse its output and releases snapshots through the completed boundary.
+
+Turning the toggle off selects a lower-latency, boundary-only mode. The demo
+waits for inference to complete, then presents the boundary color and matte
+together, discarding intermediate snapshots instead of replaying them. This
+keeps each displayed pair exact but can make motion jump when inference is
+slower than the source. The enabled mode preserves more of the source cadence,
+although intermediate color frames are temporarily shown with the preceding
+matte while the presentation catches up.
+
+The queue is normally limited to 16 snapshots or 64 MiB. Its active boundary
+and newest snapshot are retained as synchronization anchors, so it can briefly
+exceed the byte limit when both must survive. Changing the source or toggle,
+looping a video, changing frame dimensions, or handling an inference error
+resets the queue, the RVM recurrent state, and the displayed textures. The
+toggle setting itself is persisted in `PlayerPrefs`.
+
 ## MatteGenerator
 
 Add `Rvm.CoreML.MatteGenerator` to a GameObject to use the inference pipeline
