@@ -1,6 +1,6 @@
 {
   "name": "jp.keijiro.rvm-coreml",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "RVM Core ML",
   "description": "Real-time Robust Video Matting for macOS using Core ML and Metal.",
   "unity": "6000.0",
@@ -13,6 +13,6 @@
   "licensesUrl": "https://github.com/keijiro/unity-rvm-coreml/blob/main/LICENSE",
   "license": "SEE LICENSE IN LICENSE",
   "_upm": {
-    "changelog": "- Initial release."
+    "changelog": "- Added the missing `CHANGELOG.md.meta` file."
   }
 }
